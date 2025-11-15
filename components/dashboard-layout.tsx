@@ -7,7 +7,7 @@ import Link from "next/link"
 import { useRouter, usePathname } from 'next/navigation'
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
-import { LayoutDashboard, FileText, FileCheck, Users, Package, IndianRupee, BarChart3, Settings, LogOut, Menu, X, CreditCard, Receipt, ShoppingCart, Wallet, TrendingUp, Scan, Brain } from 'lucide-react'
+import { LayoutDashboard, FileText, FileCheck, Users, Package, IndianRupee, BarChart3, Settings, LogOut, Menu, X, CreditCard, Receipt, ShoppingCart, Wallet, TrendingUp, Scan, Brain, Briefcase, Calendar } from 'lucide-react'
 import { clearUser, getUser } from "@/lib/auth"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -25,6 +25,8 @@ const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { name: "AI Hub", href: "/dashboard/ai", icon: Brain },
   { name: "POS", href: "/dashboard/pos", icon: Scan },
+  { name: "Payroll", href: "/dashboard/payroll", icon: Briefcase },
+  { name: "Insights", href: "/dashboard/ai/insights", icon: TrendingUp },
   { name: "Invoices", href: "/dashboard/invoices", icon: FileText },
   { name: "Quotations", href: "/dashboard/quotations", icon: FileCheck },
   { name: "Expenses", href: "/dashboard/expenses", icon: Wallet },

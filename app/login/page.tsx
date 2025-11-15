@@ -17,7 +17,6 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [logo, setLogo] = useState<string | null>(null)
 
-  // ✅ Handle logo upload safely
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
@@ -27,14 +26,12 @@ export default function LoginPage() {
     }
   }
 
-  // ✅ Login simulation with localStorage safety check
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
 
     setTimeout(() => {
       if (typeof window !== "undefined") {
-        // Determine role based on email
         let role: "superadmin" | "admin" | "user" = "user"
         let redirectPath = "/dashboard"
 
@@ -71,7 +68,6 @@ export default function LoginPage() {
     }, 1200)
   }
 
-  // ✅ Open email client
   const handleContactMail = () => {
     if (typeof window !== "undefined") {
       window.location.href = "mailto:support@bizacc.in?subject=Login%20Support&body=Hi%20BizAcc%20Team,"
@@ -82,7 +78,6 @@ export default function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-blue-50 to-blue-100 px-4">
       <Card className="w-full max-w-md shadow-lg border-0">
         <CardHeader className="text-center space-y-2">
-          {/* ✅ Logo upload */}
           <div className="mx-auto flex flex-col items-center gap-3">
             {logo ? (
               <img
@@ -141,9 +136,7 @@ export default function LoginPage() {
             </Button>
           </form>
 
-          {/* ✅ Extra actions */}
           <div className="mt-6 flex flex-col gap-3 items-center">
-            
             <Button
               onClick={handleContactMail}
               variant="secondary"
@@ -154,7 +147,7 @@ export default function LoginPage() {
           </div>
 
           <div className="mt-6 text-center text-sm">
-            <span className="text-gray-500">Don’t have an account? </span>
+            <span className="text-gray-500">Don't have an account? </span>
             <Link href="/signup" className="text-blue-600 hover:underline">
               Sign up
             </Link>
