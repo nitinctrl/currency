@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/hooks/use-toast"
-import { Loader2 } from 'lucide-react'
+import { Loader2, MessageCircle } from 'lucide-react'
 
 export default function SignupPage() {
   const router = useRouter()
@@ -36,8 +36,9 @@ export default function SignupPage() {
       setIsLoading(false)
       setStep("verification")
       toast({
-        title: "Verification codes sent!",
-        description: `We've sent a verification link to ${formData.email} and an SMS code to ${formData.phone}`,
+        title: "WhatsApp verification sent!",
+        description: `We've sent a verification code to ${formData.phone} via WhatsApp`,
+        duration: 5000,
       })
     }, 1500)
   }
@@ -93,7 +94,7 @@ export default function SignupPage() {
           <CardDescription>
             {step === "details"
               ? "Enter your details to get started"
-              : "Verify your email and phone number"}
+              : "Verify your phone number via WhatsApp"}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -121,7 +122,7 @@ export default function SignupPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="phone">Phone Number *</Label>
+                <Label htmlFor="phone">WhatsApp Number *</Label>
                 <Input
                   id="phone"
                   type="tel"
@@ -173,16 +174,20 @@ export default function SignupPage() {
             </form>
           ) : (
             <div className="space-y-4">
-              <div className="bg-muted p-4 rounded-lg space-y-2">
-                <p className="text-sm text-muted-foreground">
-                  We've sent a verification link to: <strong>{formData.email}</strong>
+              <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg space-y-2 border border-green-200 dark:border-green-800">
+                <div className="flex items-center gap-2 text-green-700 dark:text-green-400">
+                  <MessageCircle className="h-5 w-5" />
+                  <p className="font-medium">WhatsApp Verification</p>
+                </div>
+                <p className="text-sm text-green-600 dark:text-green-400">
+                  We've sent a 6-digit code to: <strong>{formData.phone}</strong>
                 </p>
-                <p className="text-sm text-muted-foreground">
-                  We've sent an SMS code to: <strong>{formData.phone}</strong>
+                <p className="text-xs text-muted-foreground">
+                  Check your WhatsApp messages for the verification code
                 </p>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="code">Enter SMS Verification Code</Label>
+                <Label htmlFor="code">Enter WhatsApp Verification Code</Label>
                 <Input
                   id="code"
                   placeholder="Enter 6-digit code"

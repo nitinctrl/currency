@@ -11,7 +11,9 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { ArrowLeft, Plus, Trash2, Save } from 'lucide-react'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { toast } from "@/components/ui/use-toast"
+import { ArrowLeft, Plus, Trash2, Save, MessageCircle, Printer, Download } from 'lucide-react'
 import { getUser } from "@/lib/auth"
 
 const CURRENCIES = [
@@ -54,6 +56,19 @@ export default function NewQuotationPage() {
       amount: 0,
     },
   ])
+
+  const [showNewCustomerDialog, setShowNewCustomerDialog] = useState(false)
+  const [newCustomerData, setNewCustomerData] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    company: "",
+    gstin: "",
+    address: "",
+    city: "",
+    state: "",
+    pincode: "",
+  })
 
   useEffect(() => {
     const storedContacts = localStorage.getItem("contacts")
@@ -132,7 +147,7 @@ export default function NewQuotationPage() {
     return { subtotal, taxAmount, total }
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent, shouldShare = false) => {
     e.preventDefault()
     if (!user) return
 
@@ -157,7 +172,63 @@ export default function NewQuotationPage() {
     allQuotations.push(newQuotation)
     localStorage.setItem("quotations", JSON.stringify(allQuotations))
 
+    if (shouldShare) {
+      const selectedCustomer = customers.find(c => c.id === formData.customerId)
+      if (selectedCustomer?.phone) {
+        shareViaWhatsApp(newQuotation.quotationNumber, selectedCustomer.phone)
+      }
+    }
+
     router.push("/dashboard/quotations")
+  }
+
+  const handleAddNewCustomer = () => {
+    if (!user) return
+    
+    const newContact = {
+      id: Date.now().toString(),
+      userId: user.id,
+      type: "customer" as const,
+      ...newCustomerData,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    }
+
+    const storedContacts = localStorage.getItem("contacts")
+    const allContacts = storedContacts ? JSON.parse(storedContacts) : []
+    allContacts.push(newContact)
+    localStorage.setItem("contacts", JSON.stringify(allContacts))
+
+    setCustomers([...customers, newContact])
+    setFormData({ ...formData, customerId: newContact.id })
+    setShowNewCustomerDialog(false)
+    setNewCustomerData({
+      name: "",
+      email: "",
+      phone: "",
+      company: "",
+      gstin: "",
+      address: "",
+      city: "",
+      state: "",
+      pincode: "",
+    })
+
+    toast({
+      title: "Success!",
+      description: "Customer added successfully",
+    })
+  }
+
+  const shareViaWhatsApp = (quotationNumber: string, customerPhone: string) => {
+    const message = `Hi! Here's your quotation ${quotationNumber} from BizAcc. Download PDF: ${window.location.origin}/quotations/${quotationNumber}/pdf`
+    const whatsappUrl = `https://wa.me/${customerPhone.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`
+    window.open(whatsappUrl, '_blank')
+    
+    toast({
+      title: "Quotation shared!",
+      description: "WhatsApp opened with quotation details",
+    })
   }
 
   const { subtotal, taxAmount, total } = calculateTotals()
@@ -192,28 +263,149 @@ export default function NewQuotationPage() {
                     <div className="grid gap-4 md:grid-cols-2">
                       <div className="space-y-2">
                         <Label htmlFor="customerId">Customer *</Label>
-                        <Select
-                          value={formData.customerId}
-                          onValueChange={(value) => setFormData({ ...formData, customerId: value })}
-                          required
-                        >
-                          <SelectTrigger id="customerId">
-                            <SelectValue placeholder="Select customer" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {customers.length === 0 ? (
-                              <SelectItem value="none" disabled>
-                                No customers found. Add a customer first.
-                              </SelectItem>
-                            ) : (
-                              customers.map((customer) => (
-                                <SelectItem key={customer.id} value={customer.id}>
-                                  {customer.name} {customer.company ? `(${customer.company})` : ""}
+                        <div className="flex gap-2">
+                          <Select
+                            value={formData.customerId}
+                            onValueChange={(value) => setFormData({ ...formData, customerId: value })}
+                            required
+                          >
+                            <SelectTrigger id="customerId" className="flex-1">
+                              <SelectValue placeholder="Select customer" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {customers.length === 0 ? (
+                                <SelectItem value="none" disabled>
+                                  No customers found. Add a customer first.
                                 </SelectItem>
-                              ))
-                            )}
-                          </SelectContent>
-                        </Select>
+                              ) : (
+                                customers.map((customer) => (
+                                  <SelectItem key={customer.id} value={customer.id}>
+                                    {customer.name} {customer.company ? `(${customer.company})` : ""}
+                                  </SelectItem>
+                                ))
+                              )}
+                            </SelectContent>
+                          </Select>
+                          <Dialog open={showNewCustomerDialog} onOpenChange={setShowNewCustomerDialog}>
+                            <DialogTrigger asChild>
+                              <Button type="button" size="icon" variant="outline">
+                                <Plus className="h-4 w-4" />
+                              </Button>
+                            </DialogTrigger>
+                            <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+                              <DialogHeader>
+                                <DialogTitle>Add New Customer</DialogTitle>
+                                <DialogDescription>
+                                  Add customer details directly from this form
+                                </DialogDescription>
+                              </DialogHeader>
+                              <div className="space-y-4">
+                                <div className="grid gap-4 md:grid-cols-2">
+                                  <div className="space-y-2">
+                                    <Label htmlFor="newCustomerName">Full Name *</Label>
+                                    <Input
+                                      id="newCustomerName"
+                                      placeholder="John Doe"
+                                      value={newCustomerData.name}
+                                      onChange={(e) => setNewCustomerData({ ...newCustomerData, name: e.target.value })}
+                                    />
+                                  </div>
+                                  <div className="space-y-2">
+                                    <Label htmlFor="newCustomerCompany">Company Name</Label>
+                                    <Input
+                                      id="newCustomerCompany"
+                                      placeholder="Acme Corporation"
+                                      value={newCustomerData.company}
+                                      onChange={(e) => setNewCustomerData({ ...newCustomerData, company: e.target.value })}
+                                    />
+                                  </div>
+                                  <div className="space-y-2">
+                                    <Label htmlFor="newCustomerEmail">Email *</Label>
+                                    <Input
+                                      id="newCustomerEmail"
+                                      type="email"
+                                      placeholder="john@example.com"
+                                      value={newCustomerData.email}
+                                      onChange={(e) => setNewCustomerData({ ...newCustomerData, email: e.target.value })}
+                                    />
+                                  </div>
+                                  <div className="space-y-2">
+                                    <Label htmlFor="newCustomerPhone">WhatsApp Number *</Label>
+                                    <Input
+                                      id="newCustomerPhone"
+                                      placeholder="+91 98765 43210"
+                                      value={newCustomerData.phone}
+                                      onChange={(e) => setNewCustomerData({ ...newCustomerData, phone: e.target.value })}
+                                    />
+                                  </div>
+                                  <div className="space-y-2 md:col-span-2">
+                                    <Label htmlFor="newCustomerGstin">GSTIN</Label>
+                                    <Input
+                                      id="newCustomerGstin"
+                                      placeholder="29ABCDE1234F1Z5"
+                                      value={newCustomerData.gstin}
+                                      onChange={(e) => setNewCustomerData({ ...newCustomerData, gstin: e.target.value })}
+                                      maxLength={15}
+                                    />
+                                  </div>
+                                  <div className="space-y-2 md:col-span-2">
+                                    <Label htmlFor="newCustomerAddress">Address</Label>
+                                    <Input
+                                      id="newCustomerAddress"
+                                      placeholder="123 Business Park"
+                                      value={newCustomerData.address}
+                                      onChange={(e) => setNewCustomerData({ ...newCustomerData, address: e.target.value })}
+                                    />
+                                  </div>
+                                  <div className="space-y-2">
+                                    <Label htmlFor="newCustomerCity">City</Label>
+                                    <Input
+                                      id="newCustomerCity"
+                                      placeholder="Mumbai"
+                                      value={newCustomerData.city}
+                                      onChange={(e) => setNewCustomerData({ ...newCustomerData, city: e.target.value })}
+                                    />
+                                  </div>
+                                  <div className="space-y-2">
+                                    <Label htmlFor="newCustomerState">State</Label>
+                                    <Input
+                                      id="newCustomerState"
+                                      placeholder="Maharashtra"
+                                      value={newCustomerData.state}
+                                      onChange={(e) => setNewCustomerData({ ...newCustomerData, state: e.target.value })}
+                                    />
+                                  </div>
+                                  <div className="space-y-2">
+                                    <Label htmlFor="newCustomerPincode">Pincode</Label>
+                                    <Input
+                                      id="newCustomerPincode"
+                                      placeholder="400001"
+                                      value={newCustomerData.pincode}
+                                      onChange={(e) => setNewCustomerData({ ...newCustomerData, pincode: e.target.value })}
+                                      maxLength={6}
+                                    />
+                                  </div>
+                                </div>
+                                <div className="flex gap-2 justify-end">
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => setShowNewCustomerDialog(false)}
+                                  >
+                                    Cancel
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    onClick={handleAddNewCustomer}
+                                    disabled={!newCustomerData.name || !newCustomerData.email || !newCustomerData.phone}
+                                  >
+                                    Add Customer
+                                  </Button>
+                                </div>
+                              </div>
+                            </DialogContent>
+                          </Dialog>
+                        </div>
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="category">Category</Label>
@@ -433,12 +625,24 @@ export default function NewQuotationPage() {
                     <Save className="mr-2 h-4 w-4" />
                     Save Quotation
                   </Button>
+                  <Button 
+                    type="button" 
+                    className="w-full bg-green-600 hover:bg-green-700"
+                    onClick={(e) => handleSubmit(e as any, true)}
+                  >
+                    <MessageCircle className="mr-2 h-4 w-4" />
+                    Save & Share via WhatsApp
+                  </Button>
                   <Button
                     type="button"
                     variant="outline"
-                    className="w-full bg-transparent"
-                    onClick={() => router.back()}
+                    className="w-full"
+                    onClick={() => window.print()}
                   >
+                    <Printer className="mr-2 h-4 w-4" />
+                    Print Quotation
+                  </Button>
+                  <Button type="button" variant="ghost" className="w-full" onClick={() => router.back()}>
                     Cancel
                   </Button>
                 </div>

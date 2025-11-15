@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { ArrowLeft, Plus, Trash2, Printer, Save } from 'lucide-react'
+import { ArrowLeft, Plus, Trash2, Printer, Save, MessageCircle } from 'lucide-react'
 import { getUser } from "@/lib/auth"
 import type { Invoice, InvoiceItem } from "@/lib/types"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
@@ -159,7 +159,7 @@ export default function NewInvoicePage() {
     return { subtotal, taxAmount, additionalTotal, total }
   }
 
-  const handleSubmit = (e: React.FormEvent, status: "draft" | "sent" = "draft", shouldPrint = false) => {
+  const handleSubmit = (e: React.FormEvent, status: "draft" | "sent" = "draft", shouldPrint = false, shareWhatsApp = false) => {
     e.preventDefault()
     if (!user) return
 
@@ -216,6 +216,13 @@ export default function NewInvoicePage() {
     console.log("[v0] Invoice saved to localStorage")
     console.log("[v0] Total invoices now:", allInvoices.length)
 
+    if (shareWhatsApp) {
+      const selectedCustomer = customers.find(c => c.id === formData.customerId)
+      if (selectedCustomer?.phone) {
+        shareInvoiceWhatsApp(newInvoice.invoiceNumber, selectedCustomer.phone)
+      }
+    }
+
     if (shouldPrint) {
       console.log("[v0] Triggering print dialog")
       window.print()
@@ -223,6 +230,17 @@ export default function NewInvoicePage() {
 
     console.log("[v0] Redirecting to invoices list")
     router.push("/dashboard/invoices")
+  }
+
+  const shareInvoiceWhatsApp = (invoiceNumber: string, customerPhone: string) => {
+    const message = `Hi! Your invoice ${invoiceNumber} from BizAcc is ready. Download PDF: ${window.location.origin}/invoices/${invoiceNumber}/pdf`
+    const whatsappUrl = `https://wa.me/${customerPhone.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`
+    window.open(whatsappUrl, '_blank')
+    
+    toast({
+      title: "Invoice shared!",
+      description: "WhatsApp opened with invoice details",
+    })
   }
 
   const handleProductSelect = (itemId: string, productId: string) => {
@@ -843,12 +861,20 @@ export default function NewInvoicePage() {
                     <Save className="mr-2 h-4 w-4" />
                     Save as Draft
                   </Button>
+                  <Button 
+                    type="button" 
+                    className="w-full bg-green-600 hover:bg-green-700" 
+                    onClick={(e) => handleSubmit(e, "sent", false, true)}
+                  >
+                    <MessageCircle className="mr-2 h-4 w-4" />
+                    Save & Share via WhatsApp
+                  </Button>
                   <Button type="button" className="w-full" variant="secondary" onClick={(e) => handleSubmit(e, "sent")}>
                     Save Only
                   </Button>
                   <Button
                     type="button"
-                    className="w-full bg-transparent"
+                    className="w-full"
                     variant="outline"
                     onClick={(e) => handleSubmit(e, "sent", true)}
                   >
