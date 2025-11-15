@@ -2,15 +2,20 @@
 
 import type React from "react"
 
-import { useState, useMemo } from "react"
+import { useState } from "react"
 import Link from "next/link"
 import { useRouter, usePathname } from 'next/navigation'
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
-import { LayoutDashboard, FileText, FileCheck, Users, Package, IndianRupee, BarChart3, Settings, LogOut, Menu, X, CreditCard, Receipt, ShoppingCart, Wallet, TrendingUp, ChevronDown, ChevronRight, Scan, Brain, UserCheck } from 'lucide-react'
+import { LayoutDashboard, FileText, FileCheck, Users, Package, IndianRupee, BarChart3, Settings, LogOut, Menu, X, CreditCard, Receipt, ShoppingCart, Wallet, TrendingUp, Scan, Brain, UserCheck } from 'lucide-react'
 import { clearUser, getUser } from "@/lib/auth"
 import { Badge } from "@/components/ui/badge"
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 interface DashboardLayoutProps {
   children: React.ReactNode
@@ -24,7 +29,7 @@ const navigation = [
   {
     name: "Sales",
     icon: FileText,
-    submenu: [
+    dropdown: [
       { name: "Invoices", href: "/dashboard/invoices" },
       { name: "Credit Notes", href: "/dashboard/sales/credit-notes" },
       { name: "E-Invoices", href: "/dashboard/sales/e-invoices" },
@@ -34,7 +39,7 @@ const navigation = [
   {
     name: "Purchases",
     icon: ShoppingCart,
-    submenu: [
+    dropdown: [
       { name: "Purchase Orders", href: "/dashboard/purchases/orders" },
       { name: "Debit Notes", href: "/dashboard/purchases/debit-notes" },
     ],
@@ -42,7 +47,7 @@ const navigation = [
   {
     name: "Quotations",
     icon: FileCheck,
-    submenu: [
+    dropdown: [
       { name: "Quotations", href: "/dashboard/quotations" },
       { name: "Sales Orders", href: "/dashboard/quotations/sales-orders" },
       { name: "Proforma Invoices", href: "/dashboard/quotations/proforma" },
@@ -52,9 +57,9 @@ const navigation = [
   },
   { name: "Expenses", href: "/dashboard/expenses", icon: Wallet },
   {
-    name: "Products & Services",
+    name: "Products",
     icon: Package,
-    submenu: [
+    dropdown: [
       { name: "Product Master", href: "/dashboard/products" },
       { name: "Service Master", href: "/dashboard/products/services" },
       { name: "Warehouse", href: "/dashboard/products/warehouse" },
@@ -63,7 +68,7 @@ const navigation = [
   {
     name: "Payments",
     icon: IndianRupee,
-    submenu: [
+    dropdown: [
       { name: "Payments", href: "/dashboard/payments" },
       { name: "Timeline View", href: "/dashboard/payments/timeline" },
       { name: "Settlements", href: "/dashboard/payments/settlements" },
@@ -75,7 +80,7 @@ const navigation = [
   {
     name: "CRM",
     icon: Users,
-    submenu: [
+    dropdown: [
       { name: "Customers", href: "/dashboard/customers" },
       { name: "Vendors", href: "/dashboard/vendors" },
     ],
@@ -84,7 +89,7 @@ const navigation = [
   {
     name: "Reports",
     icon: BarChart3,
-    submenu: [
+    dropdown: [
       { name: "GST Reports", href: "/dashboard/reports" },
       { name: "GSTR-1", href: "/dashboard/reports/gstr-1" },
       { name: "GSTR-2B", href: "/dashboard/reports/gstr-2b" },
@@ -106,19 +111,6 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const pathname = usePathname()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   
-  const [openMenus, setOpenMenus] = useState<Record<string, boolean>>({})
-  
-  useMemo(() => {
-    const initialState: Record<string, boolean> = {}
-    const menuToOpen = navigation.find(
-      (item) => "submenu" in item && item.submenu.some((sub) => pathname?.startsWith(sub.href))
-    )
-    if (menuToOpen) {
-      initialState[menuToOpen.name] = true
-      setOpenMenus(initialState)
-    }
-  }, [pathname])
-  
   const user = getUser()
 
   const handleLogout = () => {
@@ -126,8 +118,11 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     router.push("/login")
   }
 
-  const toggleMenu = (menuName: string) => {
-    setOpenMenus((prev) => ({ ...prev, [menuName]: !prev[menuName] }))
+  const isActiveDropdownItem = (item: any) => {
+    if ("dropdown" in item) {
+      return item.dropdown.some((sub: any) => pathname === sub.href || pathname?.startsWith(sub.href + "/"))
+    }
+    return false
   }
 
   return (
@@ -181,50 +176,34 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           {/* Navigation */}
           <nav className="flex-1 space-y-1 overflow-y-auto p-4">
             {navigation.map((item) => {
-              if ("submenu" in item) {
-                const isOpen = openMenus[item.name]
-                const hasActiveChild = item.submenu.some(
-                  (sub) => pathname === sub.href || pathname?.startsWith(sub.href + "/"),
-                )
+              if ("dropdown" in item) {
+                const hasActiveChild = isActiveDropdownItem(item)
 
                 return (
-                  <Collapsible 
-                    key={item.name} 
-                    open={isOpen} 
-                    onOpenChange={() => toggleMenu(item.name)}
-                  >
-                    <CollapsibleTrigger asChild>
+                  <DropdownMenu key={item.name}>
+                    <DropdownMenuTrigger asChild>
                       <Button
-                        variant="ghost"
-                        className={cn("w-full justify-between", hasActiveChild && "text-primary")}
+                        variant={hasActiveChild ? "default" : "ghost"}
+                        className="w-full justify-start"
                       >
-                        <span className="flex items-center">
-                          <item.icon className="mr-3 h-5 w-5" />
-                          {item.name}
-                        </span>
-                        {isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                        <item.icon className="mr-3 h-5 w-5" />
+                        {item.name}
                       </Button>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent className="ml-4 mt-1 space-y-1">
-                      {item.submenu.map((subItem) => {
-                        const isActive = pathname === subItem.href || pathname?.startsWith(subItem.href + "/")
-                        return (
-                          <Link key={subItem.name} href={subItem.href} onClick={() => setSidebarOpen(false)}>
-                            <Button
-                              variant={isActive ? "default" : "ghost"}
-                              size="sm"
-                              className={cn(
-                                "w-full justify-start pl-8",
-                                !isActive && "text-muted-foreground hover:text-foreground",
-                              )}
-                            >
-                              {subItem.name}
-                            </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" className="w-56">
+                      {item.dropdown.map((subItem) => (
+                        <DropdownMenuItem key={subItem.name} asChild>
+                          <Link
+                            href={subItem.href}
+                            onClick={() => setSidebarOpen(false)}
+                            className="w-full cursor-pointer"
+                          >
+                            {subItem.name}
                           </Link>
-                        )
-                      })}
-                    </CollapsibleContent>
-                  </Collapsible>
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 )
               }
 
