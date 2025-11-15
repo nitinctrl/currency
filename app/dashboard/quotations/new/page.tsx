@@ -13,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { toast } from "@/components/ui/use-toast"
-import { ArrowLeft, Plus, Trash2, Save, MessageCircle, Printer, Download } from 'lucide-react'
+import { ArrowLeft, Plus, Trash2, Save, MessageCircle, Printer, Download, Upload } from 'lucide-react'
 import { getUser } from "@/lib/auth"
 
 const CURRENCIES = [
@@ -69,6 +69,9 @@ export default function NewQuotationPage() {
     state: "",
     pincode: "",
   })
+
+  const [companyLogo, setCompanyLogo] = useState<string>("")
+  const [companyName, setCompanyName] = useState<string>("BizAcc")
 
   useEffect(() => {
     const storedContacts = localStorage.getItem("contacts")
@@ -165,6 +168,8 @@ export default function NewQuotationPage() {
       status: "draft",
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
+      companyLogo,
+      companyName,
     }
 
     const storedQuotations = localStorage.getItem("quotations")
@@ -221,7 +226,7 @@ export default function NewQuotationPage() {
   }
 
   const shareViaWhatsApp = (quotationNumber: string, customerPhone: string) => {
-    const message = `Hi! Here's your quotation ${quotationNumber} from BizAcc. Download PDF: ${window.location.origin}/quotations/${quotationNumber}/pdf`
+    const message = `Hi! Here's your quotation ${quotationNumber} from ${companyName}. Download PDF: ${window.location.origin}/quotations/${quotationNumber}/pdf`
     const whatsappUrl = `https://wa.me/${customerPhone.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`
     window.open(whatsappUrl, '_blank')
     
@@ -235,6 +240,17 @@ export default function NewQuotationPage() {
 
   const getCurrentCurrencySymbol = () => {
     return CURRENCIES.find((c) => c.code === formData.currency)?.symbol || "₹"
+  }
+
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setCompanyLogo(reader.result as string)
+      }
+      reader.readAsDataURL(file)
+    }
   }
 
   return (
@@ -254,6 +270,43 @@ export default function NewQuotationPage() {
           <form onSubmit={handleSubmit}>
             <div className="grid gap-6 lg:grid-cols-3">
               <div className="lg:col-span-2 space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Company Branding</CardTitle>
+                    <CardDescription>Add your company logo and name for the quotation</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label htmlFor="companyName">Company Name</Label>
+                        <Input
+                          id="companyName"
+                          placeholder="Your Company Name"
+                          value={companyName}
+                          onChange={(e) => setCompanyName(e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="companyLogo">Company Logo</Label>
+                        <div className="flex items-center gap-2">
+                          <Input
+                            id="companyLogo"
+                            type="file"
+                            accept="image/*"
+                            onChange={handleLogoUpload}
+                            className="flex-1"
+                          />
+                          {companyLogo && (
+                            <div className="h-10 w-10 rounded border overflow-hidden">
+                              <img src={companyLogo || "/placeholder.svg"} alt="Logo" className="h-full w-full object-cover" />
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
                 <Card>
                   <CardHeader>
                     <CardTitle>Quotation Details</CardTitle>

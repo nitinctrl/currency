@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { ArrowLeft, Plus, Trash2, Printer, Save, MessageCircle } from 'lucide-react'
+import { ArrowLeft, Plus, Trash2, Printer, Save, MessageCircle, Upload } from 'lucide-react'
 import { getUser } from "@/lib/auth"
 import type { Invoice, InvoiceItem } from "@/lib/types"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
@@ -82,6 +82,9 @@ export default function NewInvoicePage() {
     state: "",
     pincode: "",
   })
+
+  const [companyLogo, setCompanyLogo] = useState<string>("")
+  const [companyName, setCompanyName] = useState<string>("BizAcc")
 
   useEffect(() => {
     const storedContacts = localStorage.getItem("contacts")
@@ -306,6 +309,17 @@ export default function NewInvoicePage() {
     })
   }
 
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setCompanyLogo(reader.result as string)
+      }
+      reader.readAsDataURL(file)
+    }
+  }
+
   const getCurrentCurrencySymbol = () => {
     return CURRENCIES.find((c) => c.code === formData.currency)?.symbol || "₹"
   }
@@ -329,6 +343,44 @@ export default function NewInvoicePage() {
           <form onSubmit={(e) => handleSubmit(e)}>
             <div className="grid gap-6 lg:grid-cols-3">
               <div className="lg:col-span-2 space-y-6">
+                {/* Company Branding Card */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Company Branding</CardTitle>
+                    <CardDescription>Add your company logo and name</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label htmlFor="companyName">Company Name</Label>
+                        <Input
+                          id="companyName"
+                          placeholder="Your Company Name"
+                          value={companyName}
+                          onChange={(e) => setCompanyName(e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="companyLogo">Company Logo</Label>
+                        <div className="flex items-center gap-2">
+                          <Input
+                            id="companyLogo"
+                            type="file"
+                            accept="image/*"
+                            onChange={handleLogoUpload}
+                            className="flex-1"
+                          />
+                          {companyLogo && (
+                            <div className="h-10 w-10 rounded border overflow-hidden">
+                              <img src={companyLogo || "/placeholder.svg"} alt="Logo" className="h-full w-full object-cover" />
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
                 <Card>
                   <CardHeader>
                     <CardTitle>Invoice Details</CardTitle>
