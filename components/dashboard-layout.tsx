@@ -25,81 +25,13 @@ const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { name: "AI Hub", href: "/dashboard/ai", icon: Brain },
   { name: "POS", href: "/dashboard/pos", icon: Scan },
-  {
-    name: "Sales",
-    icon: FileText,
-    dropdown: [
-      { name: "Invoices", href: "/dashboard/invoices" },
-      { name: "Credit Notes", href: "/dashboard/sales/credit-notes" },
-      { name: "E-Invoices", href: "/dashboard/sales/e-invoices" },
-      { name: "Subscriptions", href: "/dashboard/sales/subscriptions" },
-    ],
-  },
-  {
-    name: "Purchases",
-    icon: ShoppingCart,
-    dropdown: [
-      { name: "Purchase Orders", href: "/dashboard/purchases/orders" },
-      { name: "Debit Notes", href: "/dashboard/purchases/debit-notes" },
-    ],
-  },
-  {
-    name: "Quotations",
-    icon: FileCheck,
-    dropdown: [
-      { name: "Quotations", href: "/dashboard/quotations" },
-      { name: "Sales Orders", href: "/dashboard/quotations/sales-orders" },
-      { name: "Proforma Invoices", href: "/dashboard/quotations/proforma" },
-      { name: "Delivery Challans", href: "/dashboard/quotations/delivery-challans" },
-      { name: "Packing Lists", href: "/dashboard/quotations/packing-lists" },
-    ],
-  },
+  { name: "Invoices", href: "/dashboard/invoices", icon: FileText },
+  { name: "Quotations", href: "/dashboard/quotations", icon: FileCheck },
   { name: "Expenses", href: "/dashboard/expenses", icon: Wallet },
-  {
-    name: "Products",
-    icon: Package,
-    dropdown: [
-      { name: "Product Master", href: "/dashboard/products" },
-      { name: "Service Master", href: "/dashboard/products/services" },
-      { name: "Warehouse", href: "/dashboard/products/warehouse" },
-    ],
-  },
-  {
-    name: "Payments",
-    icon: IndianRupee,
-    dropdown: [
-      { name: "Payments", href: "/dashboard/payments" },
-      { name: "Timeline View", href: "/dashboard/payments/timeline" },
-      { name: "Settlements", href: "/dashboard/payments/settlements" },
-      { name: "Payment Links", href: "/dashboard/payments/links" },
-      { name: "Journals", href: "/dashboard/payments/journals" },
-      { name: "Bank Reconciliation", href: "/dashboard/payments/reconciliation" },
-    ],
-  },
-  {
-    name: "CRM",
-    icon: Users,
-    dropdown: [
-      { name: "Customers", href: "/dashboard/customers" },
-      { name: "Vendors", href: "/dashboard/vendors" },
-    ],
-  },
-  {
-    name: "Reports",
-    icon: BarChart3,
-    dropdown: [
-      { name: "GST Reports", href: "/dashboard/reports" },
-      { name: "GSTR-1", href: "/dashboard/reports/gstr-1" },
-      { name: "GSTR-2B", href: "/dashboard/reports/gstr-2b" },
-      { name: "GSTR-3B", href: "/dashboard/reports/gstr-3b" },
-      { name: "GSTR-7", href: "/dashboard/reports/gstr-7" },
-      { name: "Sales by HSN", href: "/dashboard/reports/hsn" },
-      { name: "TDS Reports", href: "/dashboard/reports/tds" },
-      { name: "TCS Reports", href: "/dashboard/reports/tcs" },
-      { name: "Profit & Loss", href: "/dashboard/reports/pl" },
-      { name: "Day Book", href: "/dashboard/reports/daybook" },
-    ],
-  },
+  { name: "Products", href: "/dashboard/products", icon: Package },
+  { name: "Payments", href: "/dashboard/payments", icon: IndianRupee },
+  { name: "CRM", href: "/dashboard/customers", icon: Users },
+  { name: "Reports", href: "/dashboard/reports", icon: BarChart3 },
   { name: "GST Filing", href: "/dashboard/gst", icon: Receipt },
   { name: "Settings", href: "/dashboard/settings", icon: Settings },
 ]
@@ -174,37 +106,6 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           {/* Navigation */}
           <nav className="flex-1 space-y-1 overflow-y-auto p-4">
             {navigation.map((item) => {
-              if ("dropdown" in item) {
-                const hasActiveChild = isActiveDropdownItem(item)
-
-                return (
-                  <DropdownMenu key={item.name}>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant={hasActiveChild ? "default" : "ghost"}
-                        className="w-full justify-start"
-                      >
-                        <item.icon className="mr-3 h-5 w-5" />
-                        {item.name}
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start" className="w-56">
-                      {item.dropdown.map((subItem) => (
-                        <DropdownMenuItem key={subItem.name} asChild>
-                          <Link
-                            href={subItem.href}
-                            onClick={() => setSidebarOpen(false)}
-                            className="w-full cursor-pointer"
-                          >
-                            {subItem.name}
-                          </Link>
-                        </DropdownMenuItem>
-                      ))}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                )
-              }
-
               const isActive = pathname === item.href || (pathname?.startsWith(item.href + "/") && item.href !== "/dashboard")
               return (
                 <Link key={item.name} href={item.href} onClick={() => setSidebarOpen(false)}>

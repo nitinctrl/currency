@@ -1,13 +1,41 @@
+"use client"
+
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Check, Globe } from 'lucide-react'
-import ChatbotWidget from "@/components/chatbot-widget" // Import the ChatbotWidget component
+import ChatbotWidget from "@/components/chatbot-widget"
 
 export default function HomePage() {
+  const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 })
+  const offerEndDate = new Date('2025-04-15') // 3 months from now
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const now = new Date().getTime()
+      const distance = offerEndDate.getTime() - now
+
+      if (distance < 0) {
+        clearInterval(timer)
+        return
+      }
+
+      setTimeLeft({
+        days: Math.floor(distance / (1000 * 60 * 60 * 24)),
+        hours: Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
+        minutes: Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60)),
+        seconds: Math.floor((distance % (1000 * 60)) / 1000)
+      })
+    }, 1000)
+
+    return () => clearInterval(timer)
+  }, [])
+
   const plans = [
     {
       name: "Starter",
+      originalPrice: "₹3,198",
       price: "₹1,599",
       duration: "After 3 Months Free",
       features: [
@@ -22,6 +50,7 @@ export default function HomePage() {
     },
     {
       name: "Professional",
+      originalPrice: "₹5,998",
       price: "₹2,999",
       duration: "1 Year",
       features: [
@@ -37,6 +66,7 @@ export default function HomePage() {
     },
     {
       name: "Pro + POS",
+      originalPrice: "₹7,998",
       price: "₹3,999",
       duration: "1 Year",
       features: [
@@ -52,6 +82,7 @@ export default function HomePage() {
     },
     {
       name: "Enterprise",
+      originalPrice: "₹11,998",
       price: "₹5,999",
       duration: "1 Year",
       features: [
@@ -97,6 +128,30 @@ export default function HomePage() {
           Complete accounting solution for Indian businesses. Manage invoices, quotations, inventory, CRM, and GST
           compliance all in one place.
         </p>
+        
+        <div className="mx-auto mb-8 max-w-2xl bg-gradient-to-r from-red-500 to-orange-500 text-white p-6 rounded-lg shadow-xl">
+          <div className="text-2xl font-bold mb-2">🎉 Limited Time Offer - 50% OFF!</div>
+          <div className="text-lg mb-3">Offer ends in:</div>
+          <div className="flex justify-center gap-4 text-center">
+            <div className="bg-white/20 backdrop-blur rounded-lg p-3 min-w-[70px]">
+              <div className="text-3xl font-bold">{timeLeft.days}</div>
+              <div className="text-xs">Days</div>
+            </div>
+            <div className="bg-white/20 backdrop-blur rounded-lg p-3 min-w-[70px]">
+              <div className="text-3xl font-bold">{timeLeft.hours}</div>
+              <div className="text-xs">Hours</div>
+            </div>
+            <div className="bg-white/20 backdrop-blur rounded-lg p-3 min-w-[70px]">
+              <div className="text-3xl font-bold">{timeLeft.minutes}</div>
+              <div className="text-xs">Minutes</div>
+            </div>
+            <div className="bg-white/20 backdrop-blur rounded-lg p-3 min-w-[70px]">
+              <div className="text-3xl font-bold">{timeLeft.seconds}</div>
+              <div className="text-xs">Seconds</div>
+            </div>
+          </div>
+        </div>
+
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
           <Link href="/dashboard">
             <Button size="lg" className="h-12 px-8 w-full sm:w-auto">
@@ -119,8 +174,6 @@ export default function HomePage() {
           No installation required • Works on any device • Access from anywhere
         </p>
       </section>
-
-      {/* Desktop Download Section */}
 
       {/* Features Section */}
       <section className="container mx-auto px-4 py-20">
@@ -163,8 +216,12 @@ export default function HomePage() {
                 <CardTitle className="text-lg">{plan.name}</CardTitle>
                 <CardDescription>{plan.duration}</CardDescription>
                 <div className="mt-4">
-                  <span className="text-3xl font-bold">{plan.price}</span>
-                  {plan.price !== "₹0" && <span className="text-sm text-muted-foreground">/year</span>}
+                  <div className="text-sm text-muted-foreground line-through">{plan.originalPrice}</div>
+                  <span className="text-3xl font-bold text-green-600">{plan.price}</span>
+                  <span className="text-sm text-muted-foreground">/year</span>
+                  <div className="mt-1 inline-block bg-red-500 text-white text-xs px-2 py-1 rounded-full ml-2">
+                    50% OFF
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>

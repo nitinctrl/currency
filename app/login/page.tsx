@@ -3,12 +3,12 @@
 import type React from "react"
 import { useState } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { useRouter } from 'next/navigation'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { FileDown, Mail } from "lucide-react"
+import { Mail } from 'lucide-react'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -69,16 +69,6 @@ export default function LoginPage() {
       }
       setLoading(false)
     }, 1200)
-  }
-
-  // ✅ Download PDF (place your brochure in /public)
-  const handleDownloadPDF = () => {
-    if (typeof window !== "undefined") {
-      const link = document.createElement("a")
-      link.href = "/bizacc-brochure.pdf"
-      link.download = "BizAcc-Brochure.pdf"
-      link.click()
-    }
   }
 
   // ✅ Open email client
@@ -153,14 +143,7 @@ export default function LoginPage() {
 
           {/* ✅ Extra actions */}
           <div className="mt-6 flex flex-col gap-3 items-center">
-            <Button
-              onClick={handleDownloadPDF}
-              variant="outline"
-              className="w-full flex items-center justify-center gap-2 bg-white border"
-            >
-              <FileDown className="h-4 w-4" /> Download Brochure (PDF)
-            </Button>
-
+            
             <Button
               onClick={handleContactMail}
               variant="secondary"

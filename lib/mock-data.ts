@@ -5,11 +5,11 @@ export const PLANS: Plan[] = [
   {
     id: "1",
     name: "Starter",
-    price: 0,
-    duration: "3 Months Free",
+    price: 1599,
+    duration: "After 3 Months Free",
     features: [
       "3 months free trial",
-      "Then ₹1,599/year",
+      "Then ₹1,599/year (50% OFF)",
       "Unlimited invoices",
       "Quotations",
       "Limited CRM (100 contacts)",
