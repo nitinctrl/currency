@@ -5,7 +5,12 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Check, Globe } from 'lucide-react'
-import ChatbotWidget from "@/components/chatbot-widget"
+import dynamic from 'next/dynamic'
+
+const ChatbotWidget = dynamic(() => import('@/components/chatbot-widget'), {
+  ssr: false,
+  loading: () => null
+})
 
 export default function HomePage() {
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 })
