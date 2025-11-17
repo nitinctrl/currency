@@ -8,7 +8,6 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Plus, Search } from 'lucide-react'
 import { AuthGuard } from "@/components/auth-guard"
-import { DashboardLayout } from "@/components/dashboard-layout"
 import {
   Dialog,
   DialogContent,
@@ -111,145 +110,143 @@ export default function SalesOrdersPage() {
 
   return (
     <AuthGuard requireApproved>
-      <DashboardLayout>
-        <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold">Sales Orders</h1>
-              <p className="text-muted-foreground">Manage confirmed sales orders</p>
-            </div>
-            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-              <DialogTrigger asChild>
-                <Button>
-                  <Plus className="mr-2 h-4 w-4" />
-                  New Sales Order
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Create Sales Order</DialogTitle>
-                  <DialogDescription>Create a new sales order from a quotation or customer</DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label>Select Quotation (Optional)</Label>
-                    <Select
-                      value={formData.quotationId}
-                      onValueChange={(value) => setFormData({ ...formData, quotationId: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Choose from accepted quotations" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {quotations.map((q) => (
-                          <SelectItem key={q.id} value={q.id}>
-                            {q.quotationNumber} - {q.customerName} - ₹{q.total.toLocaleString()}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Or Select Customer</Label>
-                    <Select
-                      value={formData.customerId}
-                      onValueChange={(value) => setFormData({ ...formData, customerId: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Choose customer" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {customers.map((c) => (
-                          <SelectItem key={c.id} value={c.id}>
-                            {c.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Delivery Date</Label>
-                    <Input
-                      type="date"
-                      value={formData.deliveryDate}
-                      onChange={(e) => setFormData({ ...formData, deliveryDate: e.target.value })}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Notes</Label>
-                    <Textarea
-                      value={formData.notes}
-                      onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                      placeholder="Additional notes..."
-                    />
-                  </div>
-
-                  <Button onClick={handleCreateSalesOrder} className="w-full">
-                    Create Sales Order
-                  </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold">Sales Orders</h1>
+            <p className="text-muted-foreground">Manage confirmed sales orders</p>
           </div>
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="mr-2 h-4 w-4" />
+                New Sales Order
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Create Sales Order</DialogTitle>
+                <DialogDescription>Create a new sales order from a quotation or customer</DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Select Quotation (Optional)</Label>
+                  <Select
+                    value={formData.quotationId}
+                    onValueChange={(value) => setFormData({ ...formData, quotationId: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Choose from accepted quotations" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {quotations.map((q) => (
+                        <SelectItem key={q.id} value={q.id}>
+                          {q.quotationNumber} - {q.customerName} - ₹{q.total.toLocaleString()}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>All Sales Orders</CardTitle>
-              <CardDescription>View and manage sales orders</CardDescription>
-              <div className="flex items-center gap-4 pt-4">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <div className="space-y-2">
+                  <Label>Or Select Customer</Label>
+                  <Select
+                    value={formData.customerId}
+                    onValueChange={(value) => setFormData({ ...formData, customerId: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Choose customer" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {customers.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Delivery Date</Label>
                   <Input
-                    placeholder="Search sales orders..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10"
+                    type="date"
+                    value={formData.deliveryDate}
+                    onChange={(e) => setFormData({ ...formData, deliveryDate: e.target.value })}
                   />
                 </div>
+
+                <div className="space-y-2">
+                  <Label>Notes</Label>
+                  <Textarea
+                    value={formData.notes}
+                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                    placeholder="Additional notes..."
+                  />
+                </div>
+
+                <Button onClick={handleCreateSalesOrder} className="w-full">
+                  Create Sales Order
+                </Button>
               </div>
-            </CardHeader>
-            <CardContent>
-              {salesOrders.length === 0 ? (
-                <div className="py-12 text-center">
-                  <p className="text-muted-foreground">No sales orders yet. Create your first sales order.</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {salesOrders
-                    .filter(
-                      (so) =>
-                        so.soNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                        so.customerName.toLowerCase().includes(searchQuery.toLowerCase()),
-                    )
-                    .map((so) => (
-                      <div key={so.id} className="flex items-center justify-between border-b pb-4 last:border-0">
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <p className="font-semibold">{so.soNumber}</p>
-                            <Badge variant={so.status === "shipped" ? "default" : "secondary"}>{so.status}</Badge>
-                          </div>
-                          <p className="text-sm text-muted-foreground">{so.customerName}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {so.items?.length || 0} items • {new Date(so.createdAt).toLocaleDateString()}
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-semibold">₹{so.total?.toLocaleString() || 0}</p>
-                          <Button variant="ghost" size="sm" className="mt-2">
-                            View Details
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+            </DialogContent>
+          </Dialog>
         </div>
-      </DashboardLayout>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>All Sales Orders</CardTitle>
+            <CardDescription>View and manage sales orders</CardDescription>
+            <div className="flex items-center gap-4 pt-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="Search sales orders..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {salesOrders.length === 0 ? (
+              <div className="py-12 text-center">
+                <p className="text-muted-foreground">No sales orders yet. Create your first sales order.</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {salesOrders
+                  .filter(
+                    (so) =>
+                      so.soNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                      so.customerName.toLowerCase().includes(searchQuery.toLowerCase()),
+                  )
+                  .map((so) => (
+                    <div key={so.id} className="flex items-center justify-between border-b pb-4 last:border-0">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <p className="font-semibold">{so.soNumber}</p>
+                          <Badge variant={so.status === "shipped" ? "default" : "secondary"}>{so.status}</Badge>
+                        </div>
+                        <p className="text-sm text-muted-foreground">{so.customerName}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {so.items?.length || 0} items • {new Date(so.createdAt).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-semibold">₹{so.total?.toLocaleString() || 0}</p>
+                        <Button variant="ghost" size="sm" className="mt-2">
+                          View Details
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </AuthGuard>
   )
 }

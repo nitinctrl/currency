@@ -1,15 +1,17 @@
 import type { User, Plan, Invoice, Contact, Product } from "./types"
 
-// Mock Plans Data
+// Mock Plans Data with 50% Discount
 export const PLANS: Plan[] = [
   {
     id: "1",
     name: "Starter",
     price: 1599,
+    originalPrice: 3198,
     duration: "After 3 Months Free",
     features: [
       "3 months free trial",
       "Then ₹1,599/year (50% OFF)",
+      "Original price: ₹3,198",
       "Unlimited invoices",
       "Quotations",
       "Limited CRM (100 contacts)",
@@ -17,14 +19,19 @@ export const PLANS: Plan[] = [
       "Mobile app access",
     ],
     maxContacts: 100,
+    maxUsers: 1,
     hasPOS: false,
   },
   {
     id: "2",
     name: "Professional",
     price: 2999,
+    originalPrice: 5998,
     duration: "1 Year",
     features: [
+      "₹2,999/year (50% OFF)",
+      "Original price: ₹5,998",
+      "Add 2 users",
       "Full accounting features",
       "Unlimited CRM",
       "Inventory management",
@@ -32,14 +39,19 @@ export const PLANS: Plan[] = [
       "Reports & analytics",
       "Priority support",
     ],
+    maxUsers: 2,
     hasPOS: false,
   },
   {
     id: "3",
     name: "Pro + POS",
     price: 3999,
+    originalPrice: 7998,
     duration: "1 Year",
     features: [
+      "₹3,999/year (50% OFF)",
+      "Original price: ₹7,998",
+      "Add 3 users",
       "All Professional features",
       "POS System",
       "Barcode Scanner Support",
@@ -47,6 +59,7 @@ export const PLANS: Plan[] = [
       "Real-time inventory sync",
       "Payment QR codes",
     ],
+    maxUsers: 3,
     hasPOS: true,
     posPrice: 1000,
   },
@@ -54,8 +67,12 @@ export const PLANS: Plan[] = [
     id: "4",
     name: "Enterprise",
     price: 5999,
+    originalPrice: 11998,
     duration: "1 Year",
     features: [
+      "₹5,999/year (50% OFF)",
+      "Original price: ₹11,998",
+      "5 users included",
       "All Pro + POS features",
       "Multi-user access (up to 5 users)",
       "Advanced automation",
@@ -67,6 +84,10 @@ export const PLANS: Plan[] = [
     hasPOS: true,
   },
 ]
+
+// Calculate offer end date (3 months from now)
+export const OFFER_END_DATE = new Date()
+OFFER_END_DATE.setMonth(OFFER_END_DATE.getMonth() + 3)
 
 // Mock Users for Admin Dashboard
 export const MOCK_USERS: User[] = [

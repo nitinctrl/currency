@@ -27,29 +27,34 @@ export function isAuthenticated(): boolean {
 
 export function isSuperadmin(): boolean {
   const user = getUser()
-  return user?.role === "superadmin" || user?.email === "admin@bizacc.in"
+  return user?.email === "admin@bizacc.in" || user?.role === "superadmin"
 }
 
 export function isAdmin(): boolean {
   const user = getUser()
-  return user?.role === "admin"
+  return user?.email === "wildknot01@gmail.com" || user?.role === "admin"
 }
 
 export function isUser(): boolean {
   const user = getUser()
-  return user?.role === "user"
+  const userEmails = ["nygifting@gmail.com", "bennala.mahesh@gmail.com"]
+  return userEmails.includes(user?.email || "") || user?.role === "user"
 }
 
 export function getUserRole(): "superadmin" | "admin" | "user" | null {
   const user = getUser()
   if (!user) return null
   if (user.email === "admin@bizacc.in") return "superadmin"
+  if (user.email === "wildknot01@gmail.com") return "admin"
+  if (["nygifting@gmail.com", "bennala.mahesh@gmail.com"].includes(user.email)) return "user"
   return user.role
 }
 
 export function hasAccess(requiredStatus: "pending" | "approved" = "approved"): boolean {
   const user = getUser()
   if (!user) return false
+  // Superadmin always has access
+  if (isSuperadmin()) return true
   if (requiredStatus === "pending") return true
   return user.status === "approved"
 }
@@ -64,4 +69,43 @@ export function isPlanActive(): boolean {
   if (!user?.planEndDate) return true
   const endDate = new Date(user.planEndDate)
   return endDate > new Date()
+}
+
+export function canAccessFeature(feature: string): boolean {
+  const user = getUser()
+  if (!user) return false
+  
+  // Superadmin has access to all features
+  if (isSuperadmin()) return true
+  
+  // Check plan-based feature access
+  const plan = user.plan
+  
+  switch (feature) {
+    case "pos":
+      return plan === "Pro + POS" || plan === "Enterprise"
+    case "multiuser":
+      return plan === "Enterprise"
+    case "advancedReports":
+      return plan === "Professional" || plan === "Pro + POS" || plan === "Enterprise"
+    case "api":
+      return plan === "Enterprise"
+    default:
+      return true
+  }
+}
+
+export function getRemainingUsers(currentUserCount: number): number {
+  const user = getUser()
+  if (!user) return 0
+  
+  const maxUsers = {
+    "Free": 1,
+    "Starter": 1,
+    "Professional": 2,
+    "Pro + POS": 3,
+    "Enterprise": 5
+  }
+  
+  return (maxUsers[user.plan as keyof typeof maxUsers] || 1) - currentUserCount
 }

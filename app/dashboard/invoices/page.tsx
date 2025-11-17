@@ -3,14 +3,13 @@
 import { useEffect, useState } from "react"
 import Link from "next/link"
 import { AuthGuard } from "@/components/auth-guard"
-import { DashboardLayout } from "@/components/dashboard-layout"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { InvoicePreviewModal } from "@/components/invoice-preview-modal"
 import { PaymentQRModal } from "@/components/payment-qr-modal"
-import { Plus, Eye, QrCode } from "lucide-react"
+import { Plus, Eye, QrCode } from 'lucide-react'
 import type { Invoice } from "@/lib/types"
 import { MOCK_INVOICES } from "@/lib/mock-data"
 import { getUser } from "@/lib/auth"
@@ -218,91 +217,89 @@ export default function InvoicesPage() {
 
   return (
     <AuthGuard requireApproved>
-      <DashboardLayout>
-        <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold">Invoices</h1>
-              <p className="text-muted-foreground">Manage your invoices</p>
-            </div>
-            <Link href="/dashboard/invoices/new">
-              <Button>
-                <Plus className="mr-2 h-4 w-4" />
-                New Invoice
-              </Button>
-            </Link>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold">Invoices</h1>
+            <p className="text-muted-foreground">Manage your invoices</p>
           </div>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>All Invoices</CardTitle>
-              <CardDescription>View and manage your invoices</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {invoices.length === 0 ? (
-                <div className="py-12 text-center">
-                  <p className="text-muted-foreground">No invoices yet. Create your first invoice to get started.</p>
-                  <Link href="/dashboard/invoices/new">
-                    <Button className="mt-4">Create Invoice</Button>
-                  </Link>
-                </div>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Invoice #</TableHead>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Due Date</TableHead>
-                      <TableHead>Customer</TableHead>
-                      <TableHead>Amount</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {invoices.map((invoice) => (
-                      <TableRow key={invoice.id}>
-                        <TableCell className="font-medium">{invoice.invoiceNumber}</TableCell>
-                        <TableCell>{new Date(invoice.date).toLocaleDateString()}</TableCell>
-                        <TableCell>{new Date(invoice.dueDate).toLocaleDateString()}</TableCell>
-                        <TableCell>Customer #{invoice.customerId}</TableCell>
-                        <TableCell>₹{invoice.total.toLocaleString()}</TableCell>
-                        <TableCell>{getStatusBadge(invoice.status)}</TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            <Button size="sm" variant="ghost" onClick={() => handlePreview(invoice)} title="Preview">
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                            <Button size="sm" variant="ghost" onClick={() => handleShowQR(invoice)} title="Payment QR">
-                              <QrCode className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
-            </CardContent>
-          </Card>
+          <Link href="/dashboard/invoices/new">
+            <Button>
+              <Plus className="mr-2 h-4 w-4" />
+              New Invoice
+            </Button>
+          </Link>
         </div>
 
-        <InvoicePreviewModal
-          invoice={selectedInvoice}
-          open={previewOpen}
-          onClose={() => setPreviewOpen(false)}
-          onDownloadPDF={handleDownloadPDF}
-          onSendEmail={handleSendEmail}
-          onSendWhatsApp={handleSendWhatsApp}
-        />
+        <Card>
+          <CardHeader>
+            <CardTitle>All Invoices</CardTitle>
+            <CardDescription>View and manage your invoices</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {invoices.length === 0 ? (
+              <div className="py-12 text-center">
+                <p className="text-muted-foreground">No invoices yet. Create your first invoice to get started.</p>
+                <Link href="/dashboard/invoices/new">
+                  <Button className="mt-4">Create Invoice</Button>
+                </Link>
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Invoice #</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Due Date</TableHead>
+                    <TableHead>Customer</TableHead>
+                    <TableHead>Amount</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {invoices.map((invoice) => (
+                    <TableRow key={invoice.id}>
+                      <TableCell className="font-medium">{invoice.invoiceNumber}</TableCell>
+                      <TableCell>{new Date(invoice.date).toLocaleDateString()}</TableCell>
+                      <TableCell>{new Date(invoice.dueDate).toLocaleDateString()}</TableCell>
+                      <TableCell>Customer #{invoice.customerId}</TableCell>
+                      <TableCell>₹{invoice.total.toLocaleString()}</TableCell>
+                      <TableCell>{getStatusBadge(invoice.status)}</TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button size="sm" variant="ghost" onClick={() => handlePreview(invoice)} title="Preview">
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button size="sm" variant="ghost" onClick={() => handleShowQR(invoice)} title="Payment QR">
+                            <QrCode className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
+      </div>
 
-        <PaymentQRModal
-          open={qrOpen}
-          onClose={() => setQrOpen(false)}
-          amount={selectedInvoice?.total || 0}
-          invoiceNumber={selectedInvoice?.invoiceNumber || ""}
-        />
-      </DashboardLayout>
+      <InvoicePreviewModal
+        invoice={selectedInvoice}
+        open={previewOpen}
+        onClose={() => setPreviewOpen(false)}
+        onDownloadPDF={handleDownloadPDF}
+        onSendEmail={handleSendEmail}
+        onSendWhatsApp={handleSendWhatsApp}
+      />
+
+      <PaymentQRModal
+        open={qrOpen}
+        onClose={() => setQrOpen(false)}
+        amount={selectedInvoice?.total || 0}
+        invoiceNumber={selectedInvoice?.invoiceNumber || ""}
+      />
     </AuthGuard>
   )
 }

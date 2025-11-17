@@ -1,7 +1,7 @@
 // User and Authentication Types
 export type UserRole = "superadmin" | "admin" | "user"
 export type UserStatus = "pending" | "approved" | "rejected" | "suspended"
-export type PlanType = "Free" | "Starter" | "Professional" | "Enterprise"
+export type PlanType = "Free" | "Starter" | "Professional" | "Pro + POS" | "Enterprise"
 
 export interface User {
   id: string
@@ -17,6 +17,9 @@ export interface User {
   adminId?: string // For users, links to their admin/organization
   createdAt: string
   updatedAt: string
+  invoiceCount?: number
+  transactionCount?: number
+  totalRevenue?: number
 }
 
 // Plan Types
@@ -24,13 +27,14 @@ export interface Plan {
   id: string
   name: PlanType
   price: number
+  originalPrice?: number // Added for showing discount
   duration: string
   features: string[]
   maxInvoices?: number
   maxContacts?: number
   maxUsers?: number
-  hasPOS?: boolean // POS access flag
-  posPrice?: number // Additional POS pricing
+  hasPOS?: boolean
+  posPrice?: number
 }
 
 // Invoice Types
