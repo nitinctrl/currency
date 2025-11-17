@@ -58,7 +58,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   }
 
   return (
-    <div className="flex h-screen bg-background">
+    <div className="flex h-screen bg-background overflow-hidden">
       {/* Mobile sidebar backdrop */}
       {sidebarOpen && (
         <div
@@ -113,7 +113,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                 <Link key={item.name} href={item.href} onClick={() => setSidebarOpen(false)}>
                   <Button
                     variant={isActive ? "default" : "ghost"}
-                    className="w-full justify-start"
+                    className="w-full justify-start h-11 text-base"
                   >
                     <item.icon className="mr-3 h-5 w-5" />
                     {item.name}
@@ -136,17 +136,17 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       {/* Main content */}
       <div className="flex flex-1 flex-col overflow-hidden">
         {/* Top bar */}
-        <header className="flex h-16 items-center justify-between border-b bg-card px-6">
+        <header className="flex h-14 md:h-16 items-center justify-between border-b bg-card px-4 md:px-6">
           <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setSidebarOpen(true)}>
-            <Menu className="h-5 w-5" />
+            <Menu className="h-6 w-6" />
           </Button>
           <div className="flex items-center gap-4">
-            <span className="text-sm text-muted-foreground">bizacc.in</span>
+            <span className="text-xs md:text-sm text-muted-foreground">bizacc.in</span>
           </div>
         </header>
 
         {/* Page content */}
-        <main className="flex-1 overflow-y-auto p-6">{children}</main>
+        <main className="flex-1 overflow-y-auto p-4 md:p-6">{children}</main>
       </div>
     </div>
   )

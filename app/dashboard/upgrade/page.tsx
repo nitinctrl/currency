@@ -3,12 +3,29 @@
 import { AuthGuard } from "@/components/auth-guard"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Check, Zap } from 'lucide-react'
+import { Check, Zap, Upload } from 'lucide-react'
 import { useState, useEffect } from "react"
 import { Badge } from "@/components/ui/badge"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
+import { useToast } from "@/hooks/use-toast"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
 
 export default function UpgradePage() {
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 })
+  const [selectedPlan, setSelectedPlan] = useState<string | null>(null)
+  const [paymentProof, setPaymentProof] = useState<File | null>(null)
+  const [transactionId, setTransactionId] = useState("")
+  const [notes, setNotes] = useState("")
+  const { toast } = useToast()
 
   useEffect(() => {
     const offerEndDate = new Date()
@@ -28,6 +45,34 @@ export default function UpgradePage() {
 
     return () => clearInterval(timer)
   }, [])
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setPaymentProof(e.target.files[0])
+    }
+  }
+
+  const handleSubmitPayment = () => {
+    if (!paymentProof || !transactionId) {
+      toast({
+        title: "Missing Information",
+        description: "Please upload payment proof and enter transaction ID",
+        variant: "destructive",
+      })
+      return
+    }
+
+    // In a real app, this would upload to server
+    toast({
+      title: "Payment Submitted",
+      description: "Your payment is under review by superadmin. You'll receive access once approved.",
+    })
+    
+    setSelectedPlan(null)
+    setPaymentProof(null)
+    setTransactionId("")
+    setNotes("")
+  }
 
   const plans = [
     {
@@ -159,9 +204,69 @@ export default function UpgradePage() {
                     </li>
                   ))}
                 </ul>
-                <Button className="w-full" variant={plan.popular ? "default" : "outline"}>
-                  Upgrade to {plan.name}
-                </Button>
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button 
+                      className="w-full" 
+                      variant={plan.popular ? "default" : "outline"}
+                      onClick={() => setSelectedPlan(plan.name)}
+                    >
+                      Upgrade to {plan.name}
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-md">
+                    <DialogHeader>
+                      <DialogTitle>Submit Payment for {plan.name}</DialogTitle>
+                      <DialogDescription>
+                        Upload your payment proof and transaction details. Superadmin will verify and activate your plan.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                      <div className="space-y-2">
+                        <Label>Plan Details</Label>
+                        <div className="p-3 bg-muted rounded-md">
+                          <p className="font-semibold">{plan.name}</p>
+                          <p className="text-2xl font-bold text-primary">{plan.price}<span className="text-sm">{plan.duration}</span></p>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="payment-proof">Payment Proof (Screenshot/PDF)</Label>
+                        <Input
+                          id="payment-proof"
+                          type="file"
+                          accept="image/*,.pdf"
+                          onChange={handleFileChange}
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="transaction-id">Transaction ID / Reference Number</Label>
+                        <Input
+                          id="transaction-id"
+                          placeholder="Enter transaction ID"
+                          value={transactionId}
+                          onChange={(e) => setTransactionId(e.target.value)}
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="notes">Additional Notes (Optional)</Label>
+                        <Textarea
+                          id="notes"
+                          placeholder="Any additional information..."
+                          value={notes}
+                          onChange={(e) => setNotes(e.target.value)}
+                        />
+                      </div>
+
+                      <Button onClick={handleSubmitPayment} className="w-full">
+                        <Upload className="mr-2 h-4 w-4" />
+                        Submit for Approval
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
               </CardContent>
             </Card>
           ))}

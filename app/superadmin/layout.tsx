@@ -3,23 +3,9 @@
 import type React from "react"
 
 import { useEffect, useState } from "react"
-import { useRouter, usePathname } from "next/navigation"
+import { useRouter, usePathname } from 'next/navigation'
 import Link from "next/link"
-import {
-  LayoutDashboard,
-  Users,
-  Building2,
-  CreditCard,
-  Settings,
-  Bell,
-  Shield,
-  BarChart3,
-  HelpCircle,
-  LogOut,
-  FileText,
-  Menu,
-  X,
-} from "lucide-react"
+import { LayoutDashboard, Users, Building2, CreditCard, Settings, Bell, Shield, BarChart3, HelpCircle, LogOut, FileText, Menu, X } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { clearUser, getUser } from "@/lib/auth"
 
@@ -50,6 +36,7 @@ export default function SuperadminLayout({ children }: { children: React.ReactNo
 
   const navItems = [
     { href: "/superadmin", icon: LayoutDashboard, label: "Dashboard" },
+    { href: "/superadmin/payment-approvals", icon: CreditCard, label: "Payment Approvals" },
     { href: "/superadmin/admins", icon: Users, label: "Manage Admins" },
     { href: "/superadmin/organizations", icon: Building2, label: "Organizations" },
     { href: "/superadmin/users", icon: Users, label: "All Users" },

@@ -1,42 +1,9 @@
-"use client"
-
-import { useState, useEffect } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Check, Globe } from 'lucide-react'
-import dynamic from 'next/dynamic'
-
-const ChatbotWidget = dynamic(() => import('@/components/chatbot-widget'), {
-  ssr: false,
-  loading: () => null
-})
 
 export default function HomePage() {
-  const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 })
-  const offerEndDate = new Date('2025-04-15') // 3 months from now
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      const now = new Date().getTime()
-      const distance = offerEndDate.getTime() - now
-
-      if (distance < 0) {
-        clearInterval(timer)
-        return
-      }
-
-      setTimeLeft({
-        days: Math.floor(distance / (1000 * 60 * 60 * 24)),
-        hours: Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
-        minutes: Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60)),
-        seconds: Math.floor((distance % (1000 * 60)) / 1000)
-      })
-    }, 1000)
-
-    return () => clearInterval(timer)
-  }, [])
-
   const plans = [
     {
       name: "Starter",
@@ -51,7 +18,6 @@ export default function HomePage() {
         "Email & chat support",
         "Mobile app access",
       ],
-      hasPOS: false,
     },
     {
       name: "Professional",
@@ -67,7 +33,6 @@ export default function HomePage() {
         "Priority support",
       ],
       popular: true,
-      hasPOS: false,
     },
     {
       name: "Pro + POS",
@@ -82,8 +47,6 @@ export default function HomePage() {
         "Real-time inventory sync",
         "Payment QR codes",
       ],
-      popular: false,
-      hasPOS: true,
     },
     {
       name: "Enterprise",
@@ -98,7 +61,6 @@ export default function HomePage() {
         "Dedicated account manager",
         "Custom integrations",
       ],
-      hasPOS: true,
     },
   ]
 
@@ -136,25 +98,7 @@ export default function HomePage() {
         
         <div className="mx-auto mb-8 max-w-2xl bg-gradient-to-r from-red-500 to-orange-500 text-white p-6 rounded-lg shadow-xl">
           <div className="text-2xl font-bold mb-2">🎉 Limited Time Offer - 50% OFF!</div>
-          <div className="text-lg mb-3">Offer ends in:</div>
-          <div className="flex justify-center gap-4 text-center">
-            <div className="bg-white/20 backdrop-blur rounded-lg p-3 min-w-[70px]">
-              <div className="text-3xl font-bold">{timeLeft.days}</div>
-              <div className="text-xs">Days</div>
-            </div>
-            <div className="bg-white/20 backdrop-blur rounded-lg p-3 min-w-[70px]">
-              <div className="text-3xl font-bold">{timeLeft.hours}</div>
-              <div className="text-xs">Hours</div>
-            </div>
-            <div className="bg-white/20 backdrop-blur rounded-lg p-3 min-w-[70px]">
-              <div className="text-3xl font-bold">{timeLeft.minutes}</div>
-              <div className="text-xs">Minutes</div>
-            </div>
-            <div className="bg-white/20 backdrop-blur rounded-lg p-3 min-w-[70px]">
-              <div className="text-3xl font-bold">{timeLeft.seconds}</div>
-              <div className="text-xs">Seconds</div>
-            </div>
-          </div>
+          <div className="text-lg">Special discount on all plans - Offer valid until April 15, 2025</div>
         </div>
 
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -248,11 +192,6 @@ export default function HomePage() {
           ))}
         </div>
       </section>
-
-      {/* Chatbot Widget */}
-      <div className="fixed bottom-6 right-6 z-50">
-        <ChatbotWidget />
-      </div>
 
       {/* Footer */}
       <footer className="border-t bg-muted/50 py-12">
