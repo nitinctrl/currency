@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useToast } from "@/hooks/use-toast"
-import { useRouter } from "next/navigation"
+import { useRouter } from 'next/navigation'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -27,7 +27,7 @@ interface PurchaseOrderItem {
   amount: number
 }
 
-export default function PurchaseOrderForm() {
+export default function QuotationForm() {
   const [customers, setCustomers] = useState<Customer[]>([])
   const [products, setProducts] = useState<Product[]>([])
   const [selectedCustomer, setSelectedCustomer] = useState<string>("")
@@ -61,7 +61,7 @@ export default function PurchaseOrderForm() {
     setQuantity(1)
   }
 
-  function savePurchaseOrder() {
+  function saveQuotation() {
     if (!selectedCustomer) {
       toast({ title: "Select a customer", variant: "destructive" })
       return
@@ -70,27 +70,27 @@ export default function PurchaseOrderForm() {
       toast({ title: "Add at least one item", variant: "destructive" })
       return
     }
-    const poNumber = `PO-${String(Date.now()).slice(-6)}`
+    const quotationNumber = `QT-${String(Date.now()).slice(-6)}`
     const total = items.reduce((sum, i) => sum + i.amount, 0)
-    const purchaseOrders = JSON.parse(localStorage.getItem("purchaseOrders") || "[]")
-    const newPO = {
+    const quotations = JSON.parse(localStorage.getItem("quotations") || "[]")
+    const newQuotation = {
       id: Date.now().toString(),
-      poNumber,
+      quotationNumber,
       date: new Date().toISOString(),
       customerId: selectedCustomer,
       items,
       total,
       status: "draft",
     }
-    purchaseOrders.push(newPO)
-    localStorage.setItem("purchaseOrders", JSON.stringify(purchaseOrders))
-    toast({ title: "Purchase Order Saved", description: `PO ${poNumber} saved successfully` })
-    router.push("/dashboard/purchases/orders") // or your PO list page
+    quotations.push(newQuotation)
+    localStorage.setItem("quotations", JSON.stringify(quotations))
+    toast({ title: "Quotation Saved", description: `Quotation ${quotationNumber} saved successfully` })
+    router.push("/dashboard/quotations")
   }
 
   return (
     <div className="max-w-3xl mx-auto p-4">
-      <h2 className="text-2xl font-semibold mb-6">New Purchase Order</h2>
+      <h2 className="text-2xl font-semibold mb-6">New Quotation</h2>
       
       <div className="mb-4">
         <Label htmlFor="customer-select">Customer</Label>
@@ -160,8 +160,8 @@ export default function PurchaseOrderForm() {
         </table>
       )}
 
-      <Button onClick={savePurchaseOrder} disabled={items.length === 0 || !selectedCustomer}>
-        Save Purchase Order
+      <Button onClick={saveQuotation} disabled={items.length === 0 || !selectedCustomer}>
+        Save Quotation
       </Button>
     </div>
   )

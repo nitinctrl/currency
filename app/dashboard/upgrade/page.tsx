@@ -62,7 +62,20 @@ export default function UpgradePage() {
       return
     }
 
-    // In a real app, this would upload to server
+    const paymentRequests = JSON.parse(localStorage.getItem("paymentRequests") || "[]")
+    const newRequest = {
+      id: Date.now().toString(),
+      userId: JSON.parse(localStorage.getItem("user") || "{}").id,
+      plan: selectedPlan,
+      transactionId,
+      notes,
+      fileName: paymentProof.name,
+      status: "pending",
+      submittedAt: new Date().toISOString(),
+    }
+    paymentRequests.push(newRequest)
+    localStorage.setItem("paymentRequests", JSON.stringify(paymentRequests))
+
     toast({
       title: "Payment Submitted",
       description: "Your payment is under review by superadmin. You'll receive access once approved.",
@@ -82,11 +95,12 @@ export default function UpgradePage() {
       originalPrice: "₹3,198",
       duration: "/year",
       features: [
-        "Basic invoicing",
-        "Up to 50 invoices/month",
-        "Email support",
-        "Basic reports",
-        "1 user account",
+        "3 months free trial",
+        "Unlimited invoices",
+        "Quotations",
+        "Limited CRM (100 contacts)",
+        "Email & chat support",
+        "Mobile app access",
       ],
     },
     {
@@ -96,12 +110,12 @@ export default function UpgradePage() {
       originalPrice: "₹5,998",
       duration: "/year",
       features: [
-        "Unlimited invoices",
-        "Advanced reporting",
-        "Priority support",
-        "Multi-currency",
-        "Up to 5 users",
+        "Full accounting features",
+        "Unlimited CRM",
         "Inventory management",
+        "GST filing",
+        "Reports & analytics",
+        "Priority support",
       ],
       popular: true,
     },
@@ -112,12 +126,12 @@ export default function UpgradePage() {
       originalPrice: "₹7,998",
       duration: "/year",
       features: [
-        "Everything in Professional",
-        "Point of Sale (POS)",
-        "Offline mode",
-        "Receipt printer support",
-        "Up to 10 users",
-        "API access",
+        "All Professional features",
+        "POS System",
+        "Barcode Scanner Support",
+        "Mobile POS",
+        "Real-time inventory sync",
+        "Payment QR codes",
       ],
     },
     {
@@ -127,12 +141,12 @@ export default function UpgradePage() {
       originalPrice: "₹11,998",
       duration: "/year",
       features: [
-        "Everything in Pro + POS",
-        "Unlimited users",
-        "Custom integrations",
+        "All Pro + POS features",
+        "Multi-user access (up to 5 users)",
+        "Advanced automation",
+        "API access",
         "Dedicated account manager",
-        "On-premise deployment option",
-        "Custom features",
+        "Custom integrations",
       ],
     },
   ]
@@ -189,10 +203,11 @@ export default function UpgradePage() {
                 <CardDescription>{plan.description}</CardDescription>
                 <div className="mt-4">
                   <div className="flex items-baseline gap-2">
-                    <span className="text-3xl font-bold">{plan.price}</span>
+                    <span className="text-3xl font-bold text-green-600">{plan.price}</span>
                     <span className="text-lg text-muted-foreground line-through">{plan.originalPrice}</span>
                   </div>
                   <p className="text-sm text-muted-foreground">{plan.duration}</p>
+                  <Badge variant="destructive" className="mt-2">50% OFF</Badge>
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">

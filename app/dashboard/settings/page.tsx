@@ -26,6 +26,10 @@ export default function SettingsPage() {
     businessName: user?.businessName || "",
   })
 
+  const [currentPassword, setCurrentPassword] = useState("")
+  const [newPassword, setNewPassword] = useState("")
+  const [confirmPassword, setConfirmPassword] = useState("")
+
   const [companySettings, setCompanySettings] = useState({
     companyName: "",
     address: "",
@@ -130,6 +134,87 @@ export default function SettingsPage() {
       title: "Saved!",
       description: "Invoice template updated successfully",
     })
+  }
+
+  const handlePasswordChange = () => {
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      toast({
+        title: "Missing Information",
+        description: "Please fill in all password fields",
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (newPassword !== confirmPassword) {
+      toast({
+        title: "Password Mismatch",
+        description: "New password and confirm password do not match",
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (newPassword.length < 8) {
+      toast({
+        title: "Weak Password",
+        description: "Password must be at least 8 characters long",
+        variant: "destructive",
+      })
+      return
+    }
+
+    const storedUser = localStorage.getItem("user")
+    if (storedUser) {
+      const userObj = JSON.parse(storedUser)
+      
+      // Verify current password
+      if (userObj.password !== currentPassword) {
+        toast({
+          title: "Incorrect Password",
+          description: "Current password is incorrect",
+          variant: "destructive",
+        })
+        return
+      }
+
+      // Check if trying to reuse old password
+      if (userObj.previousPasswords && userObj.previousPasswords.includes(newPassword)) {
+        toast({
+          title: "Password Already Used",
+          description: "Please choose a different password",
+          variant: "destructive",
+        })
+        return
+      }
+
+      // Update password and invalidate old one
+      userObj.password = newPassword
+      userObj.previousPasswords = userObj.previousPasswords || []
+      userObj.previousPasswords.push(currentPassword)
+      userObj.passwordChangedAt = new Date().toISOString()
+      
+      localStorage.setItem("user", JSON.stringify(userObj))
+      
+      // Update in users list
+      const storedUsers = localStorage.getItem("users")
+      if (storedUsers) {
+        const users = JSON.parse(storedUsers)
+        const updatedUsers = users.map((u: any) => 
+          u.id === userObj.id ? userObj : u
+        )
+        localStorage.setItem("users", JSON.stringify(updatedUsers))
+      }
+
+      toast({
+        title: "Password Changed",
+        description: "Your password has been updated successfully. Old password is now invalid.",
+      })
+
+      setCurrentPassword("")
+      setNewPassword("")
+      setConfirmPassword("")
+    }
   }
 
   return (
@@ -346,17 +431,33 @@ export default function SettingsPage() {
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="currentPassword">Current Password</Label>
-                    <Input id="currentPassword" type="password" />
+                    <Input 
+                      id="currentPassword" 
+                      type="password"
+                      value={currentPassword}
+                      onChange={(e) => setCurrentPassword(e.target.value)}
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="newPassword">New Password</Label>
-                    <Input id="newPassword" type="password" />
+                    <Input 
+                      id="newPassword" 
+                      type="password"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                    />
+                    <p className="text-xs text-muted-foreground">Minimum 8 characters</p>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="confirmPassword">Confirm New Password</Label>
-                    <Input id="confirmPassword" type="password" />
+                    <Input 
+                      id="confirmPassword" 
+                      type="password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                    />
                   </div>
-                  <Button onClick={() => toast({ title: "Success!", description: "Password changed successfully" })}>
+                  <Button onClick={handlePasswordChange}>
                     Change Password
                   </Button>
                 </CardContent>
