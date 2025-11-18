@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Input } from "@/components/ui/input"
-import { Plus, Search, AlertTriangle } from 'lucide-react'
+import { Plus, Search, AlertTriangle, Edit } from 'lucide-react'
 import type { Product } from "@/lib/types"
 import { MOCK_PRODUCTS } from "@/lib/mock-data"
 import { getUser } from "@/lib/auth"
@@ -149,6 +149,7 @@ export default function ProductsPage() {
                     <TableHead>Stock</TableHead>
                     <TableHead>Unit</TableHead>
                     <TableHead>Value</TableHead>
+                    <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -174,6 +175,13 @@ export default function ProductsPage() {
                       <TableCell className="capitalize">{product.unit}</TableCell>
                       <TableCell className="font-semibold">
                         ₹{(product.price * product.stock).toLocaleString()}
+                      </TableCell>
+                      <TableCell>
+                        <Link href={`/dashboard/products/${product.id}/edit`}>
+                          <Button variant="ghost" size="sm">
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                        </Link>
                       </TableCell>
                     </TableRow>
                   ))}
