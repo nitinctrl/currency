@@ -164,12 +164,30 @@ export default function SettingsPage() {
       return
     }
 
-    const storedUser = localStorage.getItem("user")
-    if (storedUser) {
-      const userObj = JSON.parse(storedUser)
+    if (typeof window !== "undefined" && user) {
+      const credKey = `credentials_${user.email}`
+      const storedCreds = localStorage.getItem(credKey)
       
+      let currentStoredPassword = ""
+      let previousPasswords: string[] = []
+
+      if (storedCreds) {
+        const creds = JSON.parse(storedCreds)
+        currentStoredPassword = creds.password
+        previousPasswords = creds.previousPasswords || []
+      } else {
+        // Default passwords
+        const defaults: Record<string, string> = {
+          "admin@bizacc.in": "Admin@123",
+          "wildknot01@gmail.com": "Wildknot@123",
+          "nygifting@gmail.com": "User@123",
+          "bennala.mahesh@gmail.com": "User@123"
+        }
+        currentStoredPassword = defaults[user.email] || ""
+      }
+
       // Verify current password
-      if (userObj.password !== currentPassword) {
+      if (currentPassword !== currentStoredPassword) {
         toast({
           title: "Incorrect Password",
           description: "Current password is incorrect",
@@ -179,41 +197,35 @@ export default function SettingsPage() {
       }
 
       // Check if trying to reuse old password
-      if (userObj.previousPasswords && userObj.previousPasswords.includes(newPassword)) {
+      if (previousPasswords.includes(newPassword) || newPassword === currentStoredPassword) {
         toast({
           title: "Password Already Used",
-          description: "Please choose a different password",
+          description: "Cannot reuse a previous password. Please choose a different one.",
           variant: "destructive",
         })
         return
       }
 
-      // Update password and invalidate old one
-      userObj.password = newPassword
-      userObj.previousPasswords = userObj.previousPasswords || []
-      userObj.previousPasswords.push(currentPassword)
-      userObj.passwordChangedAt = new Date().toISOString()
-      
-      localStorage.setItem("user", JSON.stringify(userObj))
-      
-      // Update in users list
-      const storedUsers = localStorage.getItem("users")
-      if (storedUsers) {
-        const users = JSON.parse(storedUsers)
-        const updatedUsers = users.map((u: any) => 
-          u.id === userObj.id ? userObj : u
-        )
-        localStorage.setItem("users", JSON.stringify(updatedUsers))
+      // Update password and add old password to history
+      previousPasswords.push(currentStoredPassword)
+      if (previousPasswords.length > 5) {
+        previousPasswords.shift() // Keep only last 5 passwords
       }
 
+      localStorage.setItem(credKey, JSON.stringify({
+        password: newPassword,
+        previousPasswords
+      }))
+
       toast({
-        title: "Password Changed",
-        description: "Your password has been updated successfully. Old password is now invalid.",
+        title: "Password Changed Successfully",
+        description: "Your password has been updated. Old password is now invalid. Redirecting to login...",
       })
 
-      setCurrentPassword("")
-      setNewPassword("")
-      setConfirmPassword("")
+      setTimeout(() => {
+        localStorage.removeItem("user")
+        window.location.href = "/login"
+      }, 2000)
     }
   }
 

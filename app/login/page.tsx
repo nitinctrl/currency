@@ -16,6 +16,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("")
   const [loading, setLoading] = useState(false)
   const [logo, setLogo] = useState<string | null>(null)
+  const [error, setError] = useState("")
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -29,19 +30,45 @@ export default function LoginPage() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
+    setError("")
 
     setTimeout(() => {
       if (typeof window !== "undefined") {
+        const credKey = `credentials_${email}`
+        const storedCreds = localStorage.getItem(credKey)
+        let isValidLogin = false
+        
+        if (storedCreds) {
+          const { password: storedPassword } = JSON.parse(storedCreds)
+          isValidLogin = password === storedPassword
+        } else {
+          // Default passwords for first-time login
+          const defaultCredentials: Record<string, string> = {
+            "admin@bizacc.in": "Admin@123",
+            "wildknot01@gmail.com": "Wildknot@123",
+            "nygifting@gmail.com": "User@123",
+            "bennala.mahesh@gmail.com": "User@123"
+          }
+          
+          isValidLogin = defaultCredentials[email] === password
+        }
+
+        if (!isValidLogin) {
+          setError("Invalid email or password")
+          setLoading(false)
+          return
+        }
+
         let role: "superadmin" | "admin" | "user" = "user"
         let redirectPath = "/dashboard"
 
         if (email === "admin@bizacc.in") {
           role = "superadmin"
           redirectPath = "/superadmin"
-        } else if (email === "wildknot@gmail.com") {
+        } else if (email === "wildknot01@gmail.com") {
           role = "admin"
           redirectPath = "/admin"
-        } else if (email === "nygifting@gmail.com") {
+        } else if (email === "nygifting@gmail.com" || email === "bennala.mahesh@gmail.com") {
           role = "user"
           redirectPath = "/dashboard"
         }
@@ -62,6 +89,7 @@ export default function LoginPage() {
         }
 
         localStorage.setItem("user", JSON.stringify(user))
+        localStorage.setItem(`lastLogin_${email}`, new Date().toISOString())
         window.location.href = redirectPath
       }
       setLoading(false)
@@ -102,6 +130,12 @@ export default function LoginPage() {
 
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">
+            {error && (
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded text-sm">
+                {error}
+              </div>
+            )}
+
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input

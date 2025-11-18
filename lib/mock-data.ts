@@ -250,3 +250,22 @@ export const MOCK_INVOICES: Invoice[] = [
     updatedAt: "2025-01-25T14:30:00Z",
   },
 ]
+
+export const USER_CREDENTIALS: Record<string, { password: string; previousPasswords: string[] }> = {
+  "admin@bizacc.in": {
+    password: "Admin@123",
+    previousPasswords: []
+  },
+  "wildknot01@gmail.com": {
+    password: "Wildknot@123",
+    previousPasswords: []
+  },
+  "nygifting@gmail.com": {
+    password: "User@123",
+    previousPasswords: []
+  },
+  "bennala.mahesh@gmail.com": {
+    password: "User@123",
+    previousPasswords: []
+  }
+}
