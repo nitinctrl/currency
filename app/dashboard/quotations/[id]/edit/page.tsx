@@ -129,7 +129,23 @@ export default function EditQuotationPage() {
   const shareViaWhatsApp = () => {
     const customer = customers.find((c) => c.id === selectedCustomer)
     const total = items.reduce((sum, i) => sum + i.amount, 0)
-    const message = `*BizAcc Quotation - ${quotationNumber}*\n\nDear ${customer?.name || 'Customer'},\n\nTotal Amount: ₹${total.toFixed(2)}\n\nThank you for your business!`
+    
+    const quotationData = {
+      id: params.id,
+      quotationNumber,
+      date: new Date().toISOString(), // Or fetch actual date
+      items,
+      subtotal: total, // Approximate since we don't have full calc here
+      total,
+      customerName: customer?.name,
+      customerCompany: customer?.company,
+      customerPhone: customer?.phone,
+      // Add other fields if available in state
+    }
+    const encodedData = btoa(JSON.stringify(quotationData))
+    const publicLink = `${window.location.origin}/public/quotation/view?data=${encodedData}`
+
+    const message = `*BizAcc Quotation - ${quotationNumber}*\n\nDear ${customer?.name || 'Customer'},\n\nTotal Amount: ₹${total.toFixed(2)}\n\nView & Download PDF: ${publicLink}\n\nThank you for your business!`
     const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`
     window.open(whatsappUrl, '_blank')
   }

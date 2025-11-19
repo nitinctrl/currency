@@ -149,7 +149,23 @@ export default function NewQuotationPage() {
     if (shareWhatsApp) {
       const customer = customers.find(c => c.id === formData.customerId)
       if (customer?.phone) {
-        const message = `Hi ${customer.name}! Here's your quotation ${quotationNumber} from ${formData.companyName}. Total: ₹${total.toLocaleString()}. Download PDF: ${window.location.origin}/quotations/${quotationNumber}.pdf`
+        const quotationData = {
+          ...quotation,
+          customerName: customer.name,
+          customerCompany: customer.company,
+          customerAddress: customer.address,
+          customerCity: customer.city,
+          customerState: customer.state,
+          customerPincode: customer.pincode,
+          customerPhone: customer.phone,
+          customerGstin: customer.gstin,
+          companyName: formData.companyName,
+          companyLogo: formData.companyLogo
+        }
+        const encodedData = btoa(JSON.stringify(quotationData))
+        const publicLink = `${window.location.origin}/public/quotation/view?data=${encodedData}`
+
+        const message = `Hi ${customer.name}! Here's your quotation ${quotationNumber} from ${formData.companyName}. Total: ₹${total.toLocaleString()}. View & Download PDF here: ${publicLink}`
         const whatsappUrl = `https://wa.me/${customer.phone.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`
         window.open(whatsappUrl, '_blank')
       }

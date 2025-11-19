@@ -221,7 +221,25 @@ export default function NewInvoicePage() {
     if (shareWhatsApp) {
       const selectedCustomer = customers.find(c => c.id === formData.customerId)
       if (selectedCustomer?.phone) {
-        shareInvoiceWhatsApp(newInvoice.invoiceNumber, selectedCustomer.phone)
+        const invoiceData = {
+          ...newInvoice,
+          customerName: selectedCustomer.name,
+          customerCompany: selectedCustomer.company,
+          customerAddress: selectedCustomer.address,
+          customerCity: selectedCustomer.city,
+          customerState: selectedCustomer.state,
+          customerPincode: selectedCustomer.pincode,
+          customerPhone: selectedCustomer.phone,
+          customerGstin: selectedCustomer.gstin,
+          companyName: companyName,
+          companyLogo: companyLogo
+        }
+        const encodedData = btoa(JSON.stringify(invoiceData))
+        const publicLink = `${window.location.origin}/public/invoice/view?data=${encodedData}`
+        
+        const message = `Hi! Your invoice ${newInvoice.invoiceNumber} from ${companyName} is ready. View & Download PDF here: ${publicLink}`
+        const whatsappUrl = `https://wa.me/${selectedCustomer.phone.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`
+        window.open(whatsappUrl, '_blank')
       }
     }
 
