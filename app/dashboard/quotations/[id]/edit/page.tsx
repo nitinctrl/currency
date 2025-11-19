@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { ArrowLeft, Save, Plus, Trash2 } from 'lucide-react'
+import { ArrowLeft, Save, Plus, Trash2, Share2, FileText, Receipt } from 'lucide-react'
 import { useToast } from "@/hooks/use-toast"
 
 interface QuotationItem {
@@ -126,6 +126,62 @@ export default function EditQuotationPage() {
     setItems(updatedItems)
   }
 
+  const shareViaWhatsApp = () => {
+    const customer = customers.find((c) => c.id === selectedCustomer)
+    const total = items.reduce((sum, i) => sum + i.amount, 0)
+    const message = `*BizAcc Quotation - ${quotationNumber}*\n\nDear ${customer?.name || 'Customer'},\n\nTotal Amount: ₹${total.toFixed(2)}\n\nThank you for your business!`
+    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`
+    window.open(whatsappUrl, '_blank')
+  }
+
+  const convertToProforma = () => {
+    const proformaNumber = `PRO-${Date.now()}`
+    const total = items.reduce((sum, i) => sum + i.amount, 0)
+    
+    const proformaInvoices = JSON.parse(localStorage.getItem("proformaInvoices") || "[]")
+    proformaInvoices.push({
+      id: Date.now().toString(),
+      invoiceNumber: proformaNumber,
+      date: new Date().toISOString(),
+      customerId: selectedCustomer,
+      items,
+      total,
+      status: "draft",
+      fromQuotation: params.id
+    })
+    localStorage.setItem("proformaInvoices", JSON.stringify(proformaInvoices))
+    
+    toast({
+      title: "Converted to Proforma",
+      description: `Created proforma invoice ${proformaNumber}`,
+    })
+    router.push("/dashboard/quotations/proforma")
+  }
+
+  const convertToInvoice = () => {
+    const invoiceNumber = `INV-${Date.now()}`
+    const total = items.reduce((sum, i) => sum + i.amount, 0)
+    
+    const invoices = JSON.parse(localStorage.getItem("invoices") || "[]")
+    invoices.push({
+      id: Date.now().toString(),
+      invoiceNumber,
+      date: new Date().toISOString(),
+      customerId: selectedCustomer,
+      items,
+      total,
+      status: "draft",
+      fromQuotation: params.id
+    })
+    localStorage.setItem("invoices", JSON.stringify(invoices))
+    
+    toast({
+      title: "Converted to Invoice",
+      description: `Created invoice ${invoiceNumber}`,
+    })
+    router.push("/dashboard/invoices")
+  }
+
   return (
     <AuthGuard requireApproved>
       <div className="space-y-6">
@@ -133,10 +189,22 @@ export default function EditQuotationPage() {
           <Button variant="ghost" size="icon" onClick={() => router.back()}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <div>
+          <div className="flex-1">
             <h1 className="text-3xl font-bold">Edit Quotation</h1>
             <p className="text-muted-foreground">Update quotation details: {quotationNumber}</p>
           </div>
+          <Button variant="outline" onClick={shareViaWhatsApp}>
+            <Share2 className="mr-2 h-4 w-4" />
+            Share WhatsApp
+          </Button>
+          <Button variant="outline" onClick={convertToProforma}>
+            <FileText className="mr-2 h-4 w-4" />
+            Convert to Proforma
+          </Button>
+          <Button variant="outline" onClick={convertToInvoice}>
+            <Receipt className="mr-2 h-4 w-4" />
+            Convert to Invoice
+          </Button>
         </div>
 
         <Card>

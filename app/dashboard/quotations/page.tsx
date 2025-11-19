@@ -19,7 +19,7 @@ interface Product {
   rate: number
 }
 
-interface PurchaseOrderItem {
+interface QuotationItem {
   productId: string
   productName: string
   quantity: number
@@ -33,7 +33,7 @@ export default function QuotationForm() {
   const [selectedCustomer, setSelectedCustomer] = useState<string>("")
   const [selectedProduct, setSelectedProduct] = useState<string>("")
   const [quantity, setQuantity] = useState<number>(1)
-  const [items, setItems] = useState<PurchaseOrderItem[]>([])
+  const [quotationItems, setQuotationItems] = useState<QuotationItem[]>([])
   const { toast } = useToast()
   const router = useRouter()
 
@@ -55,8 +55,7 @@ export default function QuotationForm() {
       return
     }
     const amount = quantity * product.rate
-    setItems([...items, { productId: product.id, productName: product.name, quantity, rate: product.rate, amount }])
-    // Reset selection
+    setQuotationItems([...quotationItems, { productId: product.id, productName: product.name, quantity, rate: product.rate, amount }])
     setSelectedProduct("")
     setQuantity(1)
   }
@@ -66,19 +65,19 @@ export default function QuotationForm() {
       toast({ title: "Select a customer", variant: "destructive" })
       return
     }
-    if (items.length === 0) {
+    if (quotationItems.length === 0) {
       toast({ title: "Add at least one item", variant: "destructive" })
       return
     }
     const quotationNumber = `QT-${String(Date.now()).slice(-6)}`
-    const total = items.reduce((sum, i) => sum + i.amount, 0)
+    const total = quotationItems.reduce((sum, i) => sum + i.amount, 0)
     const quotations = JSON.parse(localStorage.getItem("quotations") || "[]")
     const newQuotation = {
       id: Date.now().toString(),
       quotationNumber,
       date: new Date().toISOString(),
       customerId: selectedCustomer,
-      items,
+      items: quotationItems,
       total,
       status: "draft",
     }
@@ -137,7 +136,7 @@ export default function QuotationForm() {
         </div>
       </div>
 
-      {items.length > 0 && (
+      {quotationItems.length > 0 && (
         <table className="w-full mb-4 border border-gray-300 rounded">
           <thead>
             <tr className="bg-gray-100">
@@ -148,7 +147,7 @@ export default function QuotationForm() {
             </tr>
           </thead>
           <tbody>
-            {items.map((item, idx) => (
+            {quotationItems.map((item, idx) => (
               <tr key={idx}>
                 <td className="p-2 border-b border-gray-300">{item.productName}</td>
                 <td className="p-2 border-b border-gray-300 text-right">{item.quantity}</td>
@@ -160,7 +159,7 @@ export default function QuotationForm() {
         </table>
       )}
 
-      <Button onClick={saveQuotation} disabled={items.length === 0 || !selectedCustomer}>
+      <Button onClick={saveQuotation} disabled={quotationItems.length === 0 || !selectedCustomer}>
         Save Quotation
       </Button>
     </div>
