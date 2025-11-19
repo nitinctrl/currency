@@ -1,9 +1,9 @@
 "use client"
 
-import type React from "react"
 import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from 'next/navigation'
+import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -15,91 +15,67 @@ export default function LoginPage() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [loading, setLoading] = useState(false)
-  const [logo, setLogo] = useState<string | null>(null)
   const [error, setError] = useState("")
-
-  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file) {
-      const reader = new FileReader()
-      reader.onload = () => setLogo(reader.result as string)
-      reader.readAsDataURL(file)
-    }
-  }
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setError("")
 
-    setTimeout(() => {
-      if (typeof window !== "undefined") {
-        const credKey = `credentials_${email}`
-        const storedCreds = localStorage.getItem(credKey)
-        let isValidLogin = false
-        
-        if (storedCreds) {
-          const { password: storedPassword } = JSON.parse(storedCreds)
-          isValidLogin = password === storedPassword
-        } else {
-          // Default passwords for first-time login
-          const defaultCredentials: Record<string, string> = {
-            "admin@bizacc.in": "Admin@123",
-            "wildknot01@gmail.com": "Wildknot@123",
-            "nygifting@gmail.com": "User@123",
-            "bennala.mahesh@gmail.com": "User@123"
-          }
-          
-          isValidLogin = defaultCredentials[email] === password
-        }
+    try {
+      const supabase = createClient()
+      
+      const { data, error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      })
 
-        if (!isValidLogin) {
-          setError("Invalid email or password")
+      if (signInError) {
+        setError("Invalid email or password")
+        setLoading(false)
+        return
+      }
+
+      if (data.user) {
+        // Get user profile to determine role
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("role, status")
+          .eq("id", data.user.id)
+          .single()
+
+        if (!profile) {
+          setError("User profile not found")
           setLoading(false)
           return
         }
 
-        let role: "superadmin" | "admin" | "user" = "user"
+        if (profile.status !== "approved" && profile.role !== "superadmin") {
+          setError("Your account is pending approval")
+          setLoading(false)
+          return
+        }
+
+        // Redirect based on role
         let redirectPath = "/dashboard"
-
-        if (email === "admin@bizacc.in") {
-          role = "superadmin"
+        if (profile.role === "superadmin") {
           redirectPath = "/superadmin"
-        } else if (email === "wildknot01@gmail.com") {
-          role = "admin"
+        } else if (profile.role === "admin") {
           redirectPath = "/admin"
-        } else if (email === "nygifting@gmail.com" || email === "bennala.mahesh@gmail.com") {
-          role = "user"
-          redirectPath = "/dashboard"
         }
 
-        const user = {
-          id: role === "superadmin" ? "superadmin-1" : role === "admin" ? `admin-${Date.now()}` : `user-${Date.now()}`,
-          email,
-          role,
-          status: "approved" as const,
-          name: email.split("@")[0] || "Demo User",
-          businessName:
-            role === "superadmin" ? "BizAcc Platform" : role === "admin" ? "Wildknot Company" : "Nygifting Employee",
-          plan: role === "superadmin" ? "Enterprise" : role === "admin" ? "Professional" : "Starter",
-          organizationId: role === "admin" ? `org-${Date.now()}` : undefined,
-          adminId: role === "user" ? "admin-wildknot" : undefined,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        }
-
-        localStorage.setItem("user", JSON.stringify(user))
-        localStorage.setItem(`lastLogin_${email}`, new Date().toISOString())
-        window.location.href = redirectPath
+        router.push(redirectPath)
       }
+    } catch (err) {
+      setError("An error occurred during login")
+      console.error(err)
+    } finally {
       setLoading(false)
-    }, 1200)
+    }
   }
 
   const handleContactMail = () => {
-    if (typeof window !== "undefined") {
-      window.location.href = "mailto:support@bizacc.in?subject=Login%20Support&body=Hi%20BizAcc%20Team,"
-    }
+    window.location.href = "mailto:support@bizacc.in?subject=Login%20Support&body=Hi%20BizAcc%20Team,"
   }
 
   return (
@@ -107,21 +83,9 @@ export default function LoginPage() {
       <Card className="w-full max-w-md shadow-lg border-0">
         <CardHeader className="text-center space-y-2">
           <div className="mx-auto flex flex-col items-center gap-3">
-            {logo ? (
-              <img
-                src={logo || "/placeholder.svg"}
-                alt="Uploaded Logo"
-                className="w-16 h-16 object-cover rounded-full border"
-              />
-            ) : (
-              <div className="w-16 h-16 flex items-center justify-center rounded-full bg-blue-600 text-white font-bold text-lg">
-                BA
-              </div>
-            )}
-            <label className="cursor-pointer text-sm text-blue-600 hover:underline">
-              <input type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
-              Upload Logo
-            </label>
+            <div className="w-16 h-16 flex items-center justify-center rounded-full bg-blue-600 text-white font-bold text-lg">
+              BA
+            </div>
           </div>
 
           <CardTitle className="text-2xl font-bold text-gray-800 mt-2">Welcome Back</CardTitle>
