@@ -253,19 +253,19 @@ export const MOCK_INVOICES: Invoice[] = [
 
 export const USER_CREDENTIALS: Record<string, { password: string; previousPasswords: string[] }> = {
   "admin@bizacc.in": {
-    password: "Admin@123",
-    previousPasswords: []
+    password: "BizAcc@SuperAdmin2025!",
+    previousPasswords: ["Admin@123"],
   },
   "wildknot01@gmail.com": {
-    password: "Wildknot@123",
-    previousPasswords: []
+    password: "Wildknot@Admin2025!",
+    previousPasswords: ["Wildknot@123"],
   },
   "nygifting@gmail.com": {
-    password: "User@123",
-    previousPasswords: []
+    password: "NyGift@User2025!",
+    previousPasswords: ["User@123"],
   },
   "bennala.mahesh@gmail.com": {
     password: "User@123",
-    previousPasswords: []
-  }
+    previousPasswords: [],
+  },
 }
