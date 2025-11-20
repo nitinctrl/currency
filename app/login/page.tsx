@@ -1,14 +1,26 @@
 "use client"
 
+import type React from "react"
+
 import { useState } from "react"
 import Link from "next/link"
-import { useRouter } from 'next/navigation'
+import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Mail } from 'lucide-react'
+import { Mail, AlertTriangle } from "lucide-react"
+import {
+  recordLoginAttempt,
+  getFailedAttempts,
+  isAccountLocked,
+  lockAccount,
+  clearLoginAttempts,
+  sendPasswordResetEmail,
+  getRemainingLockoutTime,
+  MAX_ATTEMPTS,
+} from "@/lib/auth-security"
 
 export default function LoginPage() {
   const router = useRouter()
@@ -16,33 +28,58 @@ export default function LoginPage() {
   const [password, setPassword] = useState("")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
+  const [lockoutInfo, setLockoutInfo] = useState<{ locked: boolean; unlockTime?: number }>({ locked: false })
+  const [resetEmailSent, setResetEmailSent] = useState(false)
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setError("")
 
+    const lockStatus = isAccountLocked(email)
+    if (lockStatus.locked) {
+      setLockoutInfo(lockStatus)
+      setError(
+        `Account locked due to too many failed attempts. Try again in ${getRemainingLockoutTime(lockStatus.unlockTime!)}.`,
+      )
+      setLoading(false)
+      return
+    }
+
     try {
       const supabase = createClient()
-      
+
       const { data, error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password,
       })
 
       if (signInError) {
-        setError("Invalid email or password")
+        recordLoginAttempt(email, false)
+        const failedAttempts = getFailedAttempts(email)
+
+        if (failedAttempts >= MAX_ATTEMPTS) {
+          lockAccount(email)
+          setError(
+            `Account locked for 30 minutes due to ${MAX_ATTEMPTS} failed login attempts. A password reset email can be sent to unlock your account.`,
+          )
+          setLockoutInfo({ locked: true })
+        } else {
+          const remaining = MAX_ATTEMPTS - failedAttempts
+          setError(
+            `Invalid email or password. ${remaining} attempt${remaining !== 1 ? "s" : ""} remaining before account lockout.`,
+          )
+        }
         setLoading(false)
         return
       }
 
       if (data.user) {
+        recordLoginAttempt(email, true)
+        clearLoginAttempts(email)
+
         // Get user profile to determine role
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("role, status")
-          .eq("id", data.user.id)
-          .single()
+        const { data: profile } = await supabase.from("profiles").select("role, status").eq("id", data.user.id).single()
 
         if (!profile) {
           setError("User profile not found")
@@ -74,8 +111,17 @@ export default function LoginPage() {
     }
   }
 
-  const handleContactMail = () => {
-    window.location.href = "mailto:support@bizacc.in?subject=Login%20Support&body=Hi%20BizAcc%20Team,"
+  const handleSendResetEmail = async () => {
+    setLoading(true)
+    const result = await sendPasswordResetEmail(email)
+    if (result.success) {
+      setResetEmailSent(true)
+      clearLoginAttempts(email)
+      setError("")
+    } else {
+      setError(result.error || "Failed to send reset email")
+    }
+    setLoading(false)
   }
 
   return (
@@ -95,8 +141,16 @@ export default function LoginPage() {
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">
             {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded text-sm">
-                {error}
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded text-sm flex items-start gap-2">
+                <AlertTriangle className="h-5 w-5 flex-shrink-0 mt-0.5" />
+                <span>{error}</span>
+              </div>
+            )}
+
+            {resetEmailSent && (
+              <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded text-sm">
+                Password reset email sent! Check your inbox and follow the instructions to reset your password and
+                unlock your account.
               </div>
             )}
 
@@ -109,6 +163,7 @@ export default function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
+                disabled={loading}
               />
             </div>
 
@@ -126,17 +181,32 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                disabled={loading || lockoutInfo.locked}
               />
             </div>
 
-            <Button type="submit" className="w-full" disabled={loading}>
+            {lockoutInfo.locked && (
+              <Button
+                type="button"
+                onClick={handleSendResetEmail}
+                variant="outline"
+                className="w-full bg-transparent"
+                disabled={loading || resetEmailSent}
+              >
+                {resetEmailSent ? "Reset Email Sent" : "Send Password Reset Email to Unlock"}
+              </Button>
+            )}
+
+            <Button type="submit" className="w-full" disabled={loading || lockoutInfo.locked}>
               {loading ? "Signing in..." : "Sign In"}
             </Button>
           </form>
 
           <div className="mt-6 flex flex-col gap-3 items-center">
             <Button
-              onClick={handleContactMail}
+              onClick={() =>
+                (window.location.href = "mailto:support@bizacc.in?subject=Login%20Support&body=Hi%20BizAcc%20Team,")
+              }
               variant="secondary"
               className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white hover:bg-blue-700"
             >

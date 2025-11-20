@@ -1,9 +1,11 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Users, Building2, CreditCard, TrendingUp, CheckCircle2, Clock, AlertCircle } from "lucide-react"
+import { Users, Building2, CreditCard, TrendingUp, CheckCircle2, Clock, AlertCircle, Activity } from "lucide-react"
 import { Line, LineChart, Bar, BarChart, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from "recharts"
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
+import { createClient } from "@/lib/supabase/client"
 
 const revenueData = [
   { month: "Jan", revenue: 45000, admins: 12 },
@@ -21,6 +23,41 @@ const organizationData = [
 ]
 
 export default function SuperadminDashboard() {
+  const [activeUsers, setActiveUsers] = useState({
+    total: 0,
+    last24h: 0,
+    currentlyActive: 0,
+  })
+
+  useEffect(() => {
+    const fetchActiveUsers = async () => {
+      const supabase = createClient()
+
+      const { count: totalCount } = await supabase.from("profiles").select("*", { count: "exact", head: true })
+
+      const { data: recentSessions, count: recentCount } = await supabase
+        .from("user_sessions")
+        .select("user_id", { count: "exact" })
+        .gte("last_activity", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
+
+      const { count: currentlyActiveCount } = await supabase
+        .from("user_sessions")
+        .select("*", { count: "exact", head: true })
+        .eq("is_active", true)
+        .gte("last_activity", new Date(Date.now() - 15 * 60 * 1000).toISOString())
+
+      setActiveUsers({
+        total: totalCount || 0,
+        last24h: recentCount || 0,
+        currentlyActive: currentlyActiveCount || 0,
+      })
+    }
+
+    fetchActiveUsers()
+    const interval = setInterval(fetchActiveUsers, 30000)
+    return () => clearInterval(interval)
+  }, [])
+
   return (
     <div className="space-y-8">
       <div>
@@ -30,6 +67,18 @@ export default function SuperadminDashboard() {
 
       {/* KPI Cards */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+        <Card className="border-green-200 bg-green-50">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-green-900">Active Users Now</CardTitle>
+            <Activity className="h-5 w-5 text-green-600 animate-pulse" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-green-900">{activeUsers.currentlyActive}</div>
+            <p className="text-xs text-green-700 mt-1">{activeUsers.last24h} active in last 24h</p>
+            <p className="text-xs text-green-600 mt-1">{activeUsers.total} total users</p>
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-gray-600">Total Admins</CardTitle>
