@@ -12,18 +12,18 @@ import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { getUser, setUser as saveUser } from "@/lib/auth"
+import { createClient } from "@/lib/supabase/client"
 import { useToast } from "@/hooks/use-toast"
-import { Upload, X } from 'lucide-react'
+import { Upload, X } from "lucide-react"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 
 export default function SettingsPage() {
-  const [user, setUser] = useState(getUser())
+  const [user, setUser] = useState<any>(null)
   const { toast } = useToast()
   const [formData, setFormData] = useState({
-    name: user?.name || "",
-    email: user?.email || "",
-    businessName: user?.businessName || "",
+    name: "",
+    email: "",
+    businessName: "",
   })
 
   const [currentPassword, setCurrentPassword] = useState("")
@@ -57,6 +57,33 @@ export default function SettingsPage() {
   const [invoiceTemplate, setInvoiceTemplate] = useState("classic")
 
   useEffect(() => {
+    const fetchUser = async () => {
+      const supabase = createClient()
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      if (user) {
+        setUser(user)
+        // Fetch profile data if needed, or use metadata
+        const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single()
+
+        if (profile) {
+          setFormData({
+            name: profile.full_name || "",
+            email: user.email || "",
+            businessName: profile.business_name || "",
+          })
+        } else {
+          setFormData({
+            name: "",
+            email: user.email || "",
+            businessName: "",
+          })
+        }
+      }
+    }
+    fetchUser()
+
     const stored = localStorage.getItem("companySettings")
     if (stored) {
       setCompanySettings(JSON.parse(stored))
@@ -93,15 +120,33 @@ export default function SettingsPage() {
     setCompanySettings({ ...companySettings, logo: "" })
   }
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!user) return
-    const updatedUser = { ...user, ...formData, updatedAt: new Date().toISOString() }
-    saveUser(updatedUser)
-    setUser(updatedUser)
-    toast({
-      title: "Saved!",
-      description: "Profile updated successfully",
-    })
+
+    try {
+      const supabase = createClient()
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          full_name: formData.name,
+          business_name: formData.businessName,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", user.id)
+
+      if (error) throw error
+
+      toast({
+        title: "Saved!",
+        description: "Profile updated successfully",
+      })
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update profile",
+        variant: "destructive",
+      })
+    }
   }
 
   const handleCompanySave = () => {
@@ -136,7 +181,7 @@ export default function SettingsPage() {
     })
   }
 
-  const handlePasswordChange = () => {
+  const handlePasswordChange = async () => {
     if (!currentPassword || !newPassword || !confirmPassword) {
       toast({
         title: "Missing Information",
@@ -164,30 +209,16 @@ export default function SettingsPage() {
       return
     }
 
-    if (typeof window !== "undefined" && user) {
-      const credKey = `credentials_${user.email}`
-      const storedCreds = localStorage.getItem(credKey)
-      
-      let currentStoredPassword = ""
-      let previousPasswords: string[] = []
+    try {
+      const supabase = createClient()
 
-      if (storedCreds) {
-        const creds = JSON.parse(storedCreds)
-        currentStoredPassword = creds.password
-        previousPasswords = creds.previousPasswords || []
-      } else {
-        // Default passwords
-        const defaults: Record<string, string> = {
-          "admin@bizacc.in": "Admin@123",
-          "wildknot01@gmail.com": "Wildknot@123",
-          "nygifting@gmail.com": "User@123",
-          "bennala.mahesh@gmail.com": "User@123"
-        }
-        currentStoredPassword = defaults[user.email] || ""
-      }
+      // Verify current password by signing in
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: user.email,
+        password: currentPassword,
+      })
 
-      // Verify current password
-      if (currentPassword !== currentStoredPassword) {
+      if (signInError) {
         toast({
           title: "Incorrect Password",
           description: "Current password is incorrect",
@@ -196,36 +227,28 @@ export default function SettingsPage() {
         return
       }
 
-      // Check if trying to reuse old password
-      if (previousPasswords.includes(newPassword) || newPassword === currentStoredPassword) {
-        toast({
-          title: "Password Already Used",
-          description: "Cannot reuse a previous password. Please choose a different one.",
-          variant: "destructive",
-        })
-        return
-      }
-
-      // Update password and add old password to history
-      previousPasswords.push(currentStoredPassword)
-      if (previousPasswords.length > 5) {
-        previousPasswords.shift() // Keep only last 5 passwords
-      }
-
-      localStorage.setItem(credKey, JSON.stringify({
+      // Update password
+      const { error: updateError } = await supabase.auth.updateUser({
         password: newPassword,
-        previousPasswords
-      }))
+      })
+
+      if (updateError) throw updateError
 
       toast({
         title: "Password Changed Successfully",
-        description: "Your password has been updated. Old password is now invalid. Redirecting to login...",
+        description: "Your password has been updated.",
       })
 
-      setTimeout(() => {
-        localStorage.removeItem("user")
-        window.location.href = "/login"
-      }, 2000)
+      // Clear fields
+      setCurrentPassword("")
+      setNewPassword("")
+      setConfirmPassword("")
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update password",
+        variant: "destructive",
+      })
     }
   }
 
@@ -443,8 +466,8 @@ export default function SettingsPage() {
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="currentPassword">Current Password</Label>
-                    <Input 
-                      id="currentPassword" 
+                    <Input
+                      id="currentPassword"
                       type="password"
                       value={currentPassword}
                       onChange={(e) => setCurrentPassword(e.target.value)}
@@ -452,8 +475,8 @@ export default function SettingsPage() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="newPassword">New Password</Label>
-                    <Input 
-                      id="newPassword" 
+                    <Input
+                      id="newPassword"
                       type="password"
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
@@ -462,16 +485,14 @@ export default function SettingsPage() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="confirmPassword">Confirm New Password</Label>
-                    <Input 
-                      id="confirmPassword" 
+                    <Input
+                      id="confirmPassword"
                       type="password"
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
                     />
                   </div>
-                  <Button onClick={handlePasswordChange}>
-                    Change Password
-                  </Button>
+                  <Button onClick={handlePasswordChange}>Change Password</Button>
                 </CardContent>
               </Card>
             </TabsContent>
@@ -660,12 +681,14 @@ export default function SettingsPage() {
                 <CardContent className="space-y-4">
                   <div>
                     <p className="text-sm text-muted-foreground">Plan</p>
-                    <p className="text-lg font-semibold">{user?.plan}</p>
+                    <p className="text-lg font-semibold">{user?.metadata?.plan}</p>
                   </div>
-                  {user?.planEndDate && (
+                  {user?.metadata?.planEndDate && (
                     <div>
                       <p className="text-sm text-muted-foreground">Valid Until</p>
-                      <p className="text-lg font-semibold">{new Date(user.planEndDate).toLocaleDateString()}</p>
+                      <p className="text-lg font-semibold">
+                        {new Date(user.metadata.planEndDate).toLocaleDateString()}
+                      </p>
                     </div>
                   )}
                   <Button onClick={() => (window.location.href = "/plans")}>Upgrade Plan</Button>
