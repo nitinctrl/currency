@@ -40,7 +40,7 @@ export default function SignupPage() {
       setStep("verification")
       toast({
         title: "WhatsApp verification sent!",
-        description: `We've sent a verification code to ${formData.phone} via WhatsApp`,
+        description: `We've sent a verification code to ${formData.phone}. (Demo Code: 123456)`,
         duration: 5000,
       })
     }, 1500)
@@ -189,6 +189,9 @@ export default function SignupPage() {
                   onChange={(e) => setVerificationCode(e.target.value)}
                   maxLength={6}
                 />
+                <p className="text-xs text-muted-foreground">
+                  For this demo version, use code: <span className="font-mono font-bold">123456</span>
+                </p>
               </div>
               <Button
                 onClick={handleVerification}
