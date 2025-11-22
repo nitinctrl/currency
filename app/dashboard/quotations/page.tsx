@@ -1,167 +1,223 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { useToast } from "@/hooks/use-toast"
-import { useRouter } from 'next/navigation'
+import { useEffect, useState } from "react"
+import Link from "next/link"
+import { AuthGuard } from "@/components/auth-guard"
 import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Badge } from "@/components/ui/badge"
+import { Plus, Search, Eye, Share2, Edit, Trash2 } from "lucide-react"
+import { createClient } from "@/lib/supabase/client"
+import { getUser } from "@/lib/auth"
+import { useToast } from "@/hooks/use-toast"
 
-interface Customer {
-  id: string
-  name: string
-}
-
-interface Product {
-  id: string
-  name: string
-  rate: number
-}
-
-interface QuotationItem {
-  productId: string
-  productName: string
-  quantity: number
-  rate: number
-  amount: number
-}
-
-export default function QuotationForm() {
-  const [customers, setCustomers] = useState<Customer[]>([])
-  const [products, setProducts] = useState<Product[]>([])
-  const [selectedCustomer, setSelectedCustomer] = useState<string>("")
-  const [selectedProduct, setSelectedProduct] = useState<string>("")
-  const [quantity, setQuantity] = useState<number>(1)
-  const [quotationItems, setQuotationItems] = useState<QuotationItem[]>([])
+export default function QuotationsPage() {
+  const [quotations, setQuotations] = useState<any[]>([])
+  const [searchTerm, setSearchTerm] = useState("")
+  const [contacts, setContacts] = useState<any[]>([])
   const { toast } = useToast()
-  const router = useRouter()
+  const supabase = createClient()
 
   useEffect(() => {
-    const storedCustomers = JSON.parse(localStorage.getItem("contacts") || "[]")
-    const storedProducts = JSON.parse(localStorage.getItem("products") || "[]")
-    setCustomers(storedCustomers)
-    setProducts(storedProducts)
+    const fetchData = async () => {
+      const user = getUser()
+      if (!user) return
+
+      // Fetch customers from Supabase
+      const { data: supabaseCustomers } = await supabase.from("customers").select("*")
+
+      // Fetch legacy contacts from LocalStorage
+      const storedContacts = localStorage.getItem("contacts")
+      let localContacts: any[] = []
+      if (storedContacts) {
+        localContacts = JSON.parse(storedContacts)
+      }
+
+      // Merge contacts (Supabase takes precedence if ID conflicts, though IDs should be unique)
+      // We use a map to ensure uniqueness by ID
+      const contactMap = new Map()
+
+      // Add local first
+      localContacts.forEach((c) => contactMap.set(c.id, c))
+
+      // Add Supabase (overwriting local if same ID, which effectively "migrates" the view)
+      if (supabaseCustomers) {
+        supabaseCustomers.forEach((c) => contactMap.set(c.id, c))
+      }
+
+      setContacts(Array.from(contactMap.values()))
+
+      const storedQuotations = localStorage.getItem("quotations")
+      if (storedQuotations) {
+        const allQuotations = JSON.parse(storedQuotations)
+        setQuotations(allQuotations.filter((q: any) => q.userId === user.id).reverse())
+      }
+    }
+
+    fetchData()
   }, [])
 
-  function addItem() {
-    if (!selectedProduct || quantity <= 0) {
-      toast({ title: "Select product and enter valid quantity", variant: "destructive" })
-      return
-    }
-    const product = products.find((p) => p.id === selectedProduct)
-    if (!product) {
-      toast({ title: "Invalid product selected", variant: "destructive" })
-      return
-    }
-    const amount = quantity * product.rate
-    setQuotationItems([...quotationItems, { productId: product.id, productName: product.name, quantity, rate: product.rate, amount }])
-    setSelectedProduct("")
-    setQuantity(1)
+  const filteredQuotations = quotations.filter(
+    (q) =>
+      q.quotationNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      getCustomerName(q.customerId).toLowerCase().includes(searchTerm.toLowerCase()),
+  )
+
+  function getCustomerName(id: string) {
+    const contact = contacts.find((c) => c.id === id)
+    return contact ? contact.name : "Unknown"
   }
 
-  function saveQuotation() {
-    if (!selectedCustomer) {
-      toast({ title: "Select a customer", variant: "destructive" })
-      return
+  const deleteQuotation = (id: string) => {
+    const newQuotations = quotations.filter((q) => q.id !== id)
+    setQuotations(newQuotations)
+
+    const allQuotations = JSON.parse(localStorage.getItem("quotations") || "[]")
+    const updatedAll = allQuotations.filter((q: any) => q.id !== id)
+    localStorage.setItem("quotations", JSON.stringify(updatedAll))
+
+    toast({
+      title: "Deleted",
+      description: "Quotation deleted successfully",
+    })
+  }
+
+  const shareWhatsApp = (quotation: any) => {
+    const customer = contacts.find((c) => c.id === quotation.customerId)
+    if (customer?.phone) {
+      const quotationData = {
+        ...quotation,
+        customerName: customer.name,
+        customerCompany: customer.company, // Handle legacy field
+        customerAddress: customer.address,
+        customerCity: customer.city,
+        customerState: customer.state,
+        customerPincode: customer.pincode,
+        customerPhone: customer.phone,
+        customerGstin: customer.gst_number || customer.gstin, // Handle legacy field
+      }
+      // Using encodeURIComponent for the data to ensure safety, though base64 is usually safe-ish
+      const encodedData = btoa(JSON.stringify(quotationData))
+      const publicLink = `${window.location.origin}/public/quotation/view?data=${encodedData}`
+
+      const message = `*Quotation ${quotation.quotationNumber}*\n\nDear ${customer.name},\n\nPlease find the quotation details below:\nTotal Amount: ₹${quotation.total.toLocaleString()}\n\nView & Download PDF: ${publicLink}\n\nRegards,\nBizAcc`
+
+      // Ensure phone number is clean
+      const cleanPhone = customer.phone.replace(/\D/g, "")
+      const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`
+      window.open(whatsappUrl, "_blank")
+    } else {
+      toast({ title: "Error", description: "Customer phone number not found", variant: "destructive" })
     }
-    if (quotationItems.length === 0) {
-      toast({ title: "Add at least one item", variant: "destructive" })
-      return
-    }
-    const quotationNumber = `QT-${String(Date.now()).slice(-6)}`
-    const total = quotationItems.reduce((sum, i) => sum + i.amount, 0)
-    const quotations = JSON.parse(localStorage.getItem("quotations") || "[]")
-    const newQuotation = {
-      id: Date.now().toString(),
-      quotationNumber,
-      date: new Date().toISOString(),
-      customerId: selectedCustomer,
-      items: quotationItems,
-      total,
-      status: "draft",
-    }
-    quotations.push(newQuotation)
-    localStorage.setItem("quotations", JSON.stringify(quotations))
-    toast({ title: "Quotation Saved", description: `Quotation ${quotationNumber} saved successfully` })
-    router.push("/dashboard/quotations")
   }
 
   return (
-    <div className="max-w-3xl mx-auto p-4">
-      <h2 className="text-2xl font-semibold mb-6">New Quotation</h2>
-      
-      <div className="mb-4">
-        <Label htmlFor="customer-select">Customer</Label>
-        <Select value={selectedCustomer} onValueChange={setSelectedCustomer}>
-          <SelectTrigger id="customer-select" className="w-full">
-            <SelectValue placeholder="Select customer" />
-          </SelectTrigger>
-          <SelectContent>
-            {customers.map((c) => (
-              <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+    <AuthGuard requireApproved>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold">Quotations</h1>
+            <p className="text-muted-foreground">Manage and track your quotations</p>
+          </div>
+          <Link href="/dashboard/quotations/new">
+            <Button>
+              <Plus className="mr-2 h-4 w-4" />
+              New Quotation
+            </Button>
+          </Link>
+        </div>
+
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>All Quotations</CardTitle>
+                <CardDescription>View list of all generated quotations</CardDescription>
+              </div>
+              <div className="relative w-64">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="Search number or customer..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {filteredQuotations.length === 0 ? (
+              <div className="py-12 text-center">
+                <p className="text-muted-foreground">
+                  {searchTerm ? "No quotations found matching your search." : "No quotations created yet."}
+                </p>
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Quotation Number</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Customer</TableHead>
+                    <TableHead>Total</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredQuotations.map((quotation) => (
+                    <TableRow key={quotation.id}>
+                      <TableCell className="font-medium">{quotation.quotationNumber}</TableCell>
+                      <TableCell>
+                        {new Date(quotation.quotationDate || quotation.createdAt).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell>{getCustomerName(quotation.customerId)}</TableCell>
+                      <TableCell>₹{quotation.total?.toLocaleString()}</TableCell>
+                      <TableCell>
+                        <Badge variant={quotation.status === "accepted" ? "default" : "secondary"}>
+                          {quotation.status || "Draft"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => shareWhatsApp(quotation)}
+                            title="Share WhatsApp"
+                          >
+                            <Share2 className="h-4 w-4 text-green-600" />
+                          </Button>
+                          <Link href={`/public/quotation/view?data=${btoa(JSON.stringify(quotation))}`} target="_blank">
+                            <Button size="sm" variant="ghost" title="View/Print">
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          </Link>
+                          <Link href={`/dashboard/quotations/${quotation.id}/edit`}>
+                            <Button size="sm" variant="ghost" title="Edit">
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                          </Link>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => deleteQuotation(quotation.id)}
+                            title="Delete"
+                          >
+                            <Trash2 className="h-4 w-4 text-red-500" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
       </div>
-
-      <div className="mb-4 grid grid-cols-3 gap-4 items-end">
-        <div>
-          <Label htmlFor="product-select">Product</Label>
-          <Select value={selectedProduct} onValueChange={setSelectedProduct}>
-            <SelectTrigger id="product-select" className="w-full">
-              <SelectValue placeholder="Select product" />
-            </SelectTrigger>
-            <SelectContent>
-              {products.map((p) => (
-                <SelectItem key={p.id} value={p.id}>{p.name} (₹{p.rate})</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div>
-          <Label htmlFor="quantity-input">Quantity</Label>
-          <Input
-            id="quantity-input"
-            type="number"
-            min={1}
-            value={quantity}
-            onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
-          />
-        </div>
-
-        <div>
-          <Button onClick={addItem} className="w-full">Add Item</Button>
-        </div>
-      </div>
-
-      {quotationItems.length > 0 && (
-        <table className="w-full mb-4 border border-gray-300 rounded">
-          <thead>
-            <tr className="bg-gray-100">
-              <th className="p-2 border-b border-gray-300 text-left">Product</th>
-              <th className="p-2 border-b border-gray-300 text-right">Quantity</th>
-              <th className="p-2 border-b border-gray-300 text-right">Rate</th>
-              <th className="p-2 border-b border-gray-300 text-right">Amount</th>
-            </tr>
-          </thead>
-          <tbody>
-            {quotationItems.map((item, idx) => (
-              <tr key={idx}>
-                <td className="p-2 border-b border-gray-300">{item.productName}</td>
-                <td className="p-2 border-b border-gray-300 text-right">{item.quantity}</td>
-                <td className="p-2 border-b border-gray-300 text-right">₹{item.rate}</td>
-                <td className="p-2 border-b border-gray-300 text-right">₹{item.amount}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-
-      <Button onClick={saveQuotation} disabled={quotationItems.length === 0 || !selectedCustomer}>
-        Save Quotation
-      </Button>
-    </div>
+    </AuthGuard>
   )
 }

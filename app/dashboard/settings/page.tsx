@@ -12,13 +12,13 @@ import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { createClient } from "@/lib/supabase/client"
 import { useToast } from "@/hooks/use-toast"
 import { Upload, X } from "lucide-react"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { useAuth } from "@/contexts/auth-context"
 
 export default function SettingsPage() {
-  const [user, setUser] = useState<any>(null)
+  const { user, updateUser } = useAuth()
   const { toast } = useToast()
   const [formData, setFormData] = useState({
     name: "",
@@ -57,32 +57,13 @@ export default function SettingsPage() {
   const [invoiceTemplate, setInvoiceTemplate] = useState("classic")
 
   useEffect(() => {
-    const fetchUser = async () => {
-      const supabase = createClient()
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-      if (user) {
-        setUser(user)
-        // Fetch profile data if needed, or use metadata
-        const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single()
-
-        if (profile) {
-          setFormData({
-            name: profile.full_name || "",
-            email: user.email || "",
-            businessName: profile.business_name || "",
-          })
-        } else {
-          setFormData({
-            name: "",
-            email: user.email || "",
-            businessName: "",
-          })
-        }
-      }
+    if (user) {
+      setFormData({
+        name: user.name || "",
+        email: user.email || "",
+        businessName: user.businessName || "",
+      })
     }
-    fetchUser()
 
     const stored = localStorage.getItem("companySettings")
     if (stored) {
@@ -103,7 +84,7 @@ export default function SettingsPage() {
     if (template) {
       setInvoiceTemplate(template)
     }
-  }, [])
+  }, [user])
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -124,17 +105,26 @@ export default function SettingsPage() {
     if (!user) return
 
     try {
-      const supabase = createClient()
-      const { error } = await supabase
-        .from("profiles")
-        .update({
-          full_name: formData.name,
-          business_name: formData.businessName,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", user.id)
+      const response = await fetch("/api/profile/update", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: user.email,
+          name: formData.name,
+          businessName: formData.businessName,
+        }),
+      })
 
-      if (error) throw error
+      if (!response.ok) {
+        throw new Error("Failed to update profile")
+      }
+
+      // Update local user state
+      updateUser({
+        ...user,
+        name: formData.name,
+        businessName: formData.businessName,
+      })
 
       toast({
         title: "Saved!",
@@ -210,29 +200,21 @@ export default function SettingsPage() {
     }
 
     try {
-      const supabase = createClient()
-
-      // Verify current password by signing in
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: user.email,
-        password: currentPassword,
+      const response = await fetch("/api/auth/change-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: user?.email,
+          currentPassword,
+          newPassword,
+        }),
       })
 
-      if (signInError) {
-        toast({
-          title: "Incorrect Password",
-          description: "Current password is incorrect",
-          variant: "destructive",
-        })
-        return
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to update password")
       }
-
-      // Update password
-      const { error: updateError } = await supabase.auth.updateUser({
-        password: newPassword,
-      })
-
-      if (updateError) throw updateError
 
       toast({
         title: "Password Changed Successfully",
@@ -295,6 +277,7 @@ export default function SettingsPage() {
                       type="email"
                       value={formData.email}
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      disabled
                     />
                   </div>
                   <Button onClick={handleSave}>Save Changes</Button>
@@ -535,24 +518,21 @@ export default function SettingsPage() {
                             Minimal Template
                           </Label>
                           <p className="text-sm text-muted-foreground mt-1">
-                            Simple and elegant with focus on content, less decorative
+                            Simple and clean design focusing on the content
                           </p>
                         </div>
                       </div>
                       <div className="flex items-start space-x-3 rounded-lg border p-4 hover:bg-accent cursor-pointer">
-                        <RadioGroupItem value="compact" id="compact" />
+                        <RadioGroupItem value="bold" id="bold" />
                         <div className="flex-1">
-                          <Label htmlFor="compact" className="cursor-pointer font-medium">
-                            Compact Template
+                          <Label htmlFor="bold" className="cursor-pointer font-medium">
+                            Bold Template
                           </Label>
-                          <p className="text-sm text-muted-foreground mt-1">
-                            Space-efficient design, fits more content on single page
-                          </p>
+                          <p className="text-sm text-muted-foreground mt-1">High contrast design with strong headers</p>
                         </div>
                       </div>
                     </div>
                   </RadioGroup>
-
                   <Button onClick={handleTemplateSettingsSave}>Save Template Preference</Button>
                 </CardContent>
               </Card>
@@ -562,28 +542,24 @@ export default function SettingsPage() {
               <Card>
                 <CardHeader>
                   <CardTitle>PDF Settings</CardTitle>
-                  <CardDescription>Configure PDF generation preferences</CardDescription>
+                  <CardDescription>Configure PDF generation settings</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="paperSize">Paper Size</Label>
                     <Select
                       value={pdfSettings.paperSize}
-                      onValueChange={(value: "a4" | "thermal") => setPdfSettings({ paperSize: value })}
+                      onValueChange={(value: "a4" | "thermal") => setPdfSettings({ ...pdfSettings, paperSize: value })}
                     >
-                      <SelectTrigger>
+                      <SelectTrigger id="paperSize">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="a4">A4 (210mm x 297mm)</SelectItem>
-                        <SelectItem value="thermal">Thermal Paper (80mm)</SelectItem>
+                        <SelectItem value="a4">A4 (Standard)</SelectItem>
+                        <SelectItem value="thermal">Thermal (POS)</SelectItem>
                       </SelectContent>
                     </Select>
-                    <p className="text-xs text-muted-foreground">
-                      Choose the paper size for invoice and quotation PDFs
-                    </p>
                   </div>
-
                   <Button onClick={handlePdfSettingsSave}>Save PDF Settings</Button>
                 </CardContent>
               </Card>
@@ -592,81 +568,58 @@ export default function SettingsPage() {
             <TabsContent value="numbering" className="space-y-6">
               <Card>
                 <CardHeader>
-                  <CardTitle>Invoice & Quotation Numbering</CardTitle>
-                  <CardDescription>Configure how invoices and quotations are numbered</CardDescription>
+                  <CardTitle>Numbering Settings</CardTitle>
+                  <CardDescription>Configure invoice and quotation numbering</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="space-y-4">
-                    <h3 className="font-semibold">Invoice Numbering</h3>
-                    <div className="grid gap-4 md:grid-cols-2">
-                      <div className="space-y-2">
-                        <Label htmlFor="invoicePrefix">Invoice Prefix</Label>
-                        <Input
-                          id="invoicePrefix"
-                          value={numberingSettings.invoicePrefix}
-                          onChange={(e) =>
-                            setNumberingSettings({ ...numberingSettings, invoicePrefix: e.target.value })
-                          }
-                          placeholder="INV"
-                        />
-                        <p className="text-xs text-muted-foreground">Example: INV-001, INV-002</p>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="invoiceStartNumber">Start Number</Label>
-                        <Input
-                          id="invoiceStartNumber"
-                          type="number"
-                          min="1"
-                          value={numberingSettings.invoiceStartNumber}
-                          onChange={(e) =>
-                            setNumberingSettings({ ...numberingSettings, invoiceStartNumber: Number(e.target.value) })
-                          }
-                        />
-                        <p className="text-xs text-muted-foreground">
-                          Next invoice will be {numberingSettings.invoicePrefix}-
-                          {String(numberingSettings.invoiceStartNumber).padStart(3, "0")}
-                        </p>
-                      </div>
+                <CardContent className="space-y-4">
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="invoicePrefix">Invoice Prefix</Label>
+                      <Input
+                        id="invoicePrefix"
+                        value={numberingSettings.invoicePrefix}
+                        onChange={(e) => setNumberingSettings({ ...numberingSettings, invoicePrefix: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="invoiceStartNumber">Invoice Start Number</Label>
+                      <Input
+                        id="invoiceStartNumber"
+                        type="number"
+                        value={numberingSettings.invoiceStartNumber}
+                        onChange={(e) =>
+                          setNumberingSettings({
+                            ...numberingSettings,
+                            invoiceStartNumber: Number.parseInt(e.target.value),
+                          })
+                        }
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="quotationPrefix">Quotation Prefix</Label>
+                      <Input
+                        id="quotationPrefix"
+                        value={numberingSettings.quotationPrefix}
+                        onChange={(e) =>
+                          setNumberingSettings({ ...numberingSettings, quotationPrefix: e.target.value })
+                        }
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="quotationStartNumber">Quotation Start Number</Label>
+                      <Input
+                        id="quotationStartNumber"
+                        type="number"
+                        value={numberingSettings.quotationStartNumber}
+                        onChange={(e) =>
+                          setNumberingSettings({
+                            ...numberingSettings,
+                            quotationStartNumber: Number.parseInt(e.target.value),
+                          })
+                        }
+                      />
                     </div>
                   </div>
-
-                  <div className="space-y-4">
-                    <h3 className="font-semibold">Quotation Numbering</h3>
-                    <div className="grid gap-4 md:grid-cols-2">
-                      <div className="space-y-2">
-                        <Label htmlFor="quotationPrefix">Quotation Prefix</Label>
-                        <Input
-                          id="quotationPrefix"
-                          value={numberingSettings.quotationPrefix}
-                          onChange={(e) =>
-                            setNumberingSettings({ ...numberingSettings, quotationPrefix: e.target.value })
-                          }
-                          placeholder="QUO"
-                        />
-                        <p className="text-xs text-muted-foreground">Example: QUO-001, QUO-002</p>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="quotationStartNumber">Start Number</Label>
-                        <Input
-                          id="quotationStartNumber"
-                          type="number"
-                          min="1"
-                          value={numberingSettings.quotationStartNumber}
-                          onChange={(e) =>
-                            setNumberingSettings({
-                              ...numberingSettings,
-                              quotationStartNumber: Number(e.target.value),
-                            })
-                          }
-                        />
-                        <p className="text-xs text-muted-foreground">
-                          Next quotation will be {numberingSettings.quotationPrefix}-
-                          {String(numberingSettings.quotationStartNumber).padStart(3, "0")}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
                   <Button onClick={handleNumberingSettingsSave}>Save Numbering Settings</Button>
                 </CardContent>
               </Card>
@@ -675,23 +628,21 @@ export default function SettingsPage() {
             <TabsContent value="billing" className="space-y-6">
               <Card>
                 <CardHeader>
-                  <CardTitle>Current Plan</CardTitle>
-                  <CardDescription>Manage your subscription</CardDescription>
+                  <CardTitle>Billing & Subscription</CardTitle>
+                  <CardDescription>Manage your subscription plan</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Plan</p>
-                    <p className="text-lg font-semibold">{user?.metadata?.plan}</p>
-                  </div>
-                  {user?.metadata?.planEndDate && (
-                    <div>
-                      <p className="text-sm text-muted-foreground">Valid Until</p>
-                      <p className="text-lg font-semibold">
-                        {new Date(user.metadata.planEndDate).toLocaleDateString()}
-                      </p>
+                  <div className="rounded-lg border p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium">Current Plan</p>
+                        <p className="text-sm text-muted-foreground">{user?.plan || "Free"}</p>
+                      </div>
+                      <Button variant="outline" onClick={() => (window.location.href = "/dashboard/upgrade")}>
+                        Upgrade Plan
+                      </Button>
                     </div>
-                  )}
-                  <Button onClick={() => (window.location.href = "/plans")}>Upgrade Plan</Button>
+                  </div>
                 </CardContent>
               </Card>
             </TabsContent>

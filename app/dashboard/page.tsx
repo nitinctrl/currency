@@ -4,10 +4,11 @@ import { useEffect, useState } from "react"
 import { AuthGuard } from "@/components/auth-guard"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { PlanUpgradeBanner } from "@/components/plan-upgrade-banner"
+import { DashboardInsights } from "@/components/dashboard-insights"
 import { AISearchBar } from "@/components/ai-search-bar"
 import { FileText, Users, Package, TrendingUp, IndianRupee, Clock } from "lucide-react"
-import { MOCK_INVOICES, MOCK_CONTACTS } from "@/lib/mock-data"
-import { getUser } from "@/lib/auth"
+import { MOCK_INVOICES } from "@/lib/mock-data"
+import { useAuth } from "@/contexts/auth-context"
 import {
   Line,
   LineChart,
@@ -31,6 +32,7 @@ const profitLossData = [
 ]
 
 export default function DashboardPage() {
+  const { user } = useAuth()
   const [stats, setStats] = useState({
     totalInvoices: 0,
     paidInvoices: 0,
@@ -50,27 +52,21 @@ export default function DashboardPage() {
   ])
 
   useEffect(() => {
-    const user = getUser()
     if (!user) return
 
-    // Calculate stats from mock data
-    const userInvoices = MOCK_INVOICES.filter((inv) => inv.userId === user.id)
-    const userContacts = MOCK_CONTACTS.filter((c) => c.userId === user.id && c.type === "customer")
+    const fetchStats = async () => {
+      try {
+        const response = await fetch(`/api/dashboard/stats?email=${user.email}`)
+        if (response.ok) {
+          const data = await response.json()
+          setStats(data)
+        }
+      } catch (error) {
+        console.error("Failed to fetch stats:", error)
+      }
+    }
 
-    const paidInvoices = userInvoices.filter((inv) => inv.status === "paid")
-    const totalRevenue = paidInvoices.reduce((sum, inv) => sum + inv.total, 0)
-    const pendingInvoices = userInvoices.filter((inv) => inv.status === "sent" || inv.status === "overdue")
-    const pendingAmount = pendingInvoices.reduce((sum, inv) => sum + inv.total, 0)
-    const overdueInvoices = userInvoices.filter((inv) => inv.status === "overdue")
-
-    setStats({
-      totalInvoices: userInvoices.length,
-      paidInvoices: paidInvoices.length,
-      totalRevenue,
-      pendingAmount,
-      totalCustomers: userContacts.length,
-      overdueInvoices: overdueInvoices.length,
-    })
+    fetchStats()
 
     const storedPurchaseOrders = localStorage.getItem("purchaseOrders")
     const storedInvoices = localStorage.getItem("invoices")
@@ -113,7 +109,7 @@ export default function DashboardPage() {
 
       setPurchaseVsSalesData(chartData)
     }
-  }, [])
+  }, [user])
 
   return (
     <AuthGuard requireApproved>
@@ -124,6 +120,8 @@ export default function DashboardPage() {
         </div>
 
         <PlanUpgradeBanner />
+
+        <DashboardInsights />
 
         <AISearchBar />
 

@@ -21,6 +21,7 @@ import {
   getRemainingLockoutTime,
   MAX_ATTEMPTS,
 } from "@/lib/auth-security"
+import { setUser } from "@/lib/auth"
 
 export default function LoginPage() {
   const router = useRouter()
@@ -79,7 +80,11 @@ export default function LoginPage() {
         clearLoginAttempts(email)
 
         // Get user profile to determine role
-        const { data: profile } = await supabase.from("profiles").select("role, status").eq("id", data.user.id).single()
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("role, status, full_name, business_name, plan")
+          .eq("id", data.user.id)
+          .single()
 
         if (!profile) {
           setError("User profile not found")
@@ -92,6 +97,19 @@ export default function LoginPage() {
           setLoading(false)
           return
         }
+
+        // Mapping Supabase profile to the User interface expected by lib/types
+        setUser({
+          id: data.user.id,
+          email: data.user.email!,
+          name: profile.full_name || "",
+          role: profile.role,
+          status: profile.status,
+          businessName: profile.business_name,
+          plan: profile.plan || "Free",
+          createdAt: new Date().toISOString(), // These dates might not be in the select above, but are required by type
+          updatedAt: new Date().toISOString(),
+        })
 
         // Redirect based on role
         let redirectPath = "/dashboard"

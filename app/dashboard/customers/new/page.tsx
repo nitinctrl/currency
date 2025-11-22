@@ -3,16 +3,16 @@
 import type React from "react"
 
 import { useState } from "react"
-import { useRouter } from 'next/navigation'
+import { useRouter } from "next/navigation"
 import { AuthGuard } from "@/components/auth-guard"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { ArrowLeft } from 'lucide-react'
-import { getUser } from "@/lib/auth"
-import type { Contact } from "@/lib/types"
+import { ArrowLeft, Loader2 } from "lucide-react"
+import { createClient } from "@/lib/supabase/client"
+import { useToast } from "@/hooks/use-toast"
 
 const INDIAN_STATES = [
   "Andhra Pradesh",
@@ -47,7 +47,9 @@ const INDIAN_STATES = [
 
 export default function NewCustomerPage() {
   const router = useRouter()
-  const user = getUser()
+  const { toast } = useToast()
+  const [isLoading, setIsLoading] = useState(false)
+  const supabase = createClient()
 
   const [formData, setFormData] = useState({
     name: "",
@@ -61,25 +63,42 @@ export default function NewCustomerPage() {
     pincode: "",
   })
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!user) return
+    setIsLoading(true)
 
-    const newContact: Contact = {
-      id: Date.now().toString(),
-      userId: user.id,
-      type: "customer",
-      ...formData,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+
+      if (!user) {
+        toast({ title: "Error", description: "You must be logged in", variant: "destructive" })
+        return
+      }
+
+      const { error } = await supabase.from("customers").insert({
+        user_id: user.id,
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone,
+        gst_number: formData.gstin,
+        address: formData.address,
+        city: formData.city,
+        state: formData.state,
+        pincode: formData.pincode,
+        notes: formData.company ? `Company: ${formData.company}` : "",
+      })
+
+      if (error) throw error
+
+      toast({ title: "Success", description: "Customer added successfully" })
+      router.push("/dashboard/customers")
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" })
+    } finally {
+      setIsLoading(false)
     }
-
-    const storedContacts = localStorage.getItem("contacts")
-    const allContacts = storedContacts ? JSON.parse(storedContacts) : []
-    allContacts.push(newContact)
-    localStorage.setItem("contacts", JSON.stringify(allContacts))
-
-    router.push("/dashboard/customers")
   }
 
   return (
@@ -254,15 +273,11 @@ export default function NewCustomerPage() {
               </Card>
 
               <div className="space-y-2">
-                <Button type="submit" className="w-full">
+                <Button type="submit" className="w-full" disabled={isLoading}>
+                  {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Add Customer
                 </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full bg-transparent"
-                  onClick={() => router.back()}
-                >
+                <Button type="button" variant="outline" className="w-full bg-transparent" onClick={() => router.back()}>
                   Cancel
                 </Button>
               </div>

@@ -8,26 +8,15 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
 import { useToast } from "@/hooks/use-toast"
-import { createClient } from "@/lib/supabase/client"
-import { useState, useEffect } from "react"
+import { useState } from "react"
+import { useAuth } from "@/contexts/auth-context"
 
 export default function AdminSettingsPage() {
+  const { user } = useAuth()
   const { toast } = useToast()
   const [currentPassword, setCurrentPassword] = useState("")
   const [newPassword, setNewPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
-  const [user, setUser] = useState<any>(null)
-
-  useEffect(() => {
-    const fetchUser = async () => {
-      const supabase = createClient()
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-      setUser(user)
-    }
-    fetchUser()
-  }, [])
 
   const handlePasswordChange = async () => {
     if (!user) return
@@ -51,29 +40,21 @@ export default function AdminSettingsPage() {
     }
 
     try {
-      const supabase = createClient()
-
-      // Verify current password
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: user.email,
-        password: currentPassword,
+      const response = await fetch("/api/auth/change-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: user.email,
+          currentPassword,
+          newPassword,
+        }),
       })
 
-      if (signInError) {
-        toast({
-          title: "Incorrect Password",
-          description: "Current password is incorrect",
-          variant: "destructive",
-        })
-        return
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to update password")
       }
-
-      // Update password
-      const { error: updateError } = await supabase.auth.updateUser({
-        password: newPassword,
-      })
-
-      if (updateError) throw updateError
 
       toast({
         title: "Success!",

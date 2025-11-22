@@ -729,9 +729,9 @@ export default function AdminUsersPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Free">Free</SelectItem>
-                  <SelectItem value="Starter">Starter (₹4,999/year)</SelectItem>
-                  <SelectItem value="Professional">Professional (₹9,999/year)</SelectItem>
-                  <SelectItem value="Enterprise">Enterprise (₹19,999/year)</SelectItem>
+                  <SelectItem value="Starter">Starter (₹1,599/year)</SelectItem>
+                  <SelectItem value="Professional">Professional (₹2,999/year)</SelectItem>
+                  <SelectItem value="Enterprise">Enterprise (₹5,999/year)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -760,9 +760,9 @@ export default function AdminUsersPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Free">Free</SelectItem>
-                  <SelectItem value="Starter">Starter (₹4,999/year)</SelectItem>
-                  <SelectItem value="Professional">Professional (₹9,999/year)</SelectItem>
-                  <SelectItem value="Enterprise">Enterprise (₹19,999/year)</SelectItem>
+                  <SelectItem value="Starter">Starter (₹1,599/year)</SelectItem>
+                  <SelectItem value="Professional">Professional (₹2,999/year)</SelectItem>
+                  <SelectItem value="Enterprise">Enterprise (₹5,999/year)</SelectItem>
                 </SelectContent>
               </Select>
             </div>

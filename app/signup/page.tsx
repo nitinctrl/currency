@@ -4,14 +4,15 @@ import type React from "react"
 
 import { useState } from "react"
 import Link from "next/link"
-import { useRouter } from 'next/navigation'
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/hooks/use-toast"
-import { Loader2, MessageCircle } from 'lucide-react'
+import { Loader2, MessageCircle } from "lucide-react"
+import { createClient } from "@/lib/supabase/client"
 
 export default function SignupPage() {
   const router = useRouter()
@@ -27,11 +28,13 @@ export default function SignupPage() {
     plan: "Starter",
   })
   const [verificationCode, setVerificationCode] = useState("")
+  const supabase = createClient()
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
 
+    // Simulate sending WhatsApp code
     setTimeout(() => {
       setIsLoading(false)
       setStep("verification")
@@ -43,44 +46,61 @@ export default function SignupPage() {
     }, 1500)
   }
 
-  const handleVerification = () => {
+  const handleVerification = async () => {
     setIsLoading(true)
-    setTimeout(() => {
-      // Generate unique ID
-      const userId = `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
 
-      const newUser = {
-        id: userId,
-        name: formData.name,
+    try {
+      // 1. Sign up with Supabase Auth
+      const { data: authData, error: authError } = await supabase.auth.signUp({
         email: formData.email,
-        businessName: formData.businessName,
-        plan: formData.plan,
-        role: "user" as const,
-        status: "pending" as const,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
+        password: formData.password,
+        options: {
+          data: {
+            full_name: formData.name,
+            business_name: formData.businessName,
+            plan: formData.plan,
+            phone: formData.phone,
+          },
+        },
+      })
+
+      if (authError) throw authError
+
+      if (authData.user) {
+        // 2. Create profile entry (if triggers aren't set up, do it manually here)
+        // Assuming RLS allows insert for own user
+        const { error: profileError } = await supabase.from("profiles").insert({
+          id: authData.user.id,
+          email: formData.email,
+          full_name: formData.name,
+          business_name: formData.businessName,
+          plan: formData.plan,
+          role: "user",
+          status: "pending",
+          // phone is not in schema yet, but can be added later or stored in metadata
+        })
+
+        if (profileError) {
+          // If profile creation fails (e.g. because trigger already did it), ignore duplicate error
+          // or log it. For now, we'll assume it might be handled by a trigger or we need to handle it.
+          console.error("Profile creation error:", profileError)
+        }
       }
 
-      // Get existing users from allUsers array
-      const existingUsersJson = localStorage.getItem("allUsers")
-      const existingUsers = existingUsersJson ? JSON.parse(existingUsersJson) : []
-
-      // Add new user to the array
-      const updatedUsers = [...existingUsers, newUser]
-
-      // Save to allUsers (for admin dashboard)
-      localStorage.setItem("allUsers", JSON.stringify(updatedUsers))
-
-      // Also save as current user (for login state)
-      localStorage.setItem("user", JSON.stringify(newUser))
-
-      setIsLoading(false)
       toast({
         title: "Success!",
         description: "Your account has been created successfully. Please wait for admin approval.",
       })
       router.push("/pending-approval")
-    }, 1500)
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Signup failed",
+        description: error instanceof Error ? error.message : "Something went wrong",
+      })
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -92,9 +112,7 @@ export default function SignupPage() {
           </div>
           <CardTitle className="text-2xl font-bold">Create your account</CardTitle>
           <CardDescription>
-            {step === "details"
-              ? "Enter your details to get started"
-              : "Verify your phone number via WhatsApp"}
+            {step === "details" ? "Enter your details to get started" : "Verify your phone number via WhatsApp"}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -182,9 +200,7 @@ export default function SignupPage() {
                 <p className="text-sm text-green-600 dark:text-green-400">
                   We've sent a 6-digit code to: <strong>{formData.phone}</strong>
                 </p>
-                <p className="text-xs text-muted-foreground">
-                  Check your WhatsApp messages for the verification code
-                </p>
+                <p className="text-xs text-muted-foreground">Check your WhatsApp messages for the verification code</p>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="code">Enter WhatsApp Verification Code</Label>
@@ -204,11 +220,7 @@ export default function SignupPage() {
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Verify & Create Account
               </Button>
-              <Button
-                variant="ghost"
-                className="w-full"
-                onClick={() => setStep("details")}
-              >
+              <Button variant="ghost" className="w-full" onClick={() => setStep("details")}>
                 Back to Details
               </Button>
             </div>

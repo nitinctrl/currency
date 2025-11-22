@@ -8,14 +8,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Input } from "@/components/ui/input"
-import { Plus, Search, AlertTriangle, Edit } from 'lucide-react'
+import { Plus, Search, AlertTriangle, Edit } from "lucide-react"
 import type { Product } from "@/lib/types"
 import { MOCK_PRODUCTS } from "@/lib/mock-data"
 import { getUser } from "@/lib/auth"
+import { useToast } from "@/hooks/use-toast"
 
 export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([])
   const [searchTerm, setSearchTerm] = useState("")
+  const { toast } = useToast()
 
   useEffect(() => {
     const user = getUser()
@@ -31,6 +33,32 @@ export default function ProductsPage() {
       localStorage.setItem("products", JSON.stringify(MOCK_PRODUCTS))
     }
   }, [])
+
+  const handleUpdate = (id: string, field: keyof Product, value: string | number) => {
+    const updatedProducts = products.map((p) => {
+      if (p.id === id) {
+        return { ...p, [field]: value }
+      }
+      return p
+    })
+    setProducts(updatedProducts)
+
+    // Update localStorage
+    const allProducts = JSON.parse(localStorage.getItem("products") || "[]")
+    const newAllProducts = allProducts.map((p: Product) => {
+      if (p.id === id) {
+        return { ...p, [field]: value }
+      }
+      return p
+    })
+    localStorage.setItem("products", JSON.stringify(newAllProducts))
+
+    toast({
+      title: "Product Updated",
+      description: "Changes saved successfully",
+      duration: 1000,
+    })
+  }
 
   const filteredProducts = products.filter(
     (product) =>
@@ -156,21 +184,43 @@ export default function ProductsPage() {
                   {filteredProducts.map((product) => (
                     <TableRow key={product.id}>
                       <TableCell>
-                        <div>
-                          <p className="font-medium">{product.name}</p>
-                          {product.description && (
-                            <p className="text-sm text-muted-foreground">{product.description}</p>
-                          )}
+                        <div className="space-y-2">
+                          <Input
+                            value={product.name}
+                            onChange={(e) => handleUpdate(product.id, "name", e.target.value)}
+                            className="h-8 font-medium"
+                          />
+                          <Input
+                            value={product.description || ""}
+                            onChange={(e) => handleUpdate(product.id, "description", e.target.value)}
+                            className="h-7 text-xs text-muted-foreground"
+                            placeholder="Description"
+                          />
                         </div>
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline">{product.sku || "-"}</Badge>
                       </TableCell>
                       <TableCell>{product.hsn || "-"}</TableCell>
-                      <TableCell>₹{product.price.toLocaleString()}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center">
+                          <span className="mr-1">₹</span>
+                          <Input
+                            type="number"
+                            value={product.price}
+                            onChange={(e) => handleUpdate(product.id, "price", Number.parseFloat(e.target.value))}
+                            className="h-8 w-24"
+                          />
+                        </div>
+                      </TableCell>
                       <TableCell>{product.taxRate}%</TableCell>
                       <TableCell>
-                        <Badge variant={product.stock < 10 ? "destructive" : "default"}>{product.stock}</Badge>
+                        <Input
+                          type="number"
+                          value={product.stock}
+                          onChange={(e) => handleUpdate(product.id, "stock", Number.parseInt(e.target.value))}
+                          className={`h-8 w-20 ${product.stock < 10 ? "border-red-500 text-red-600" : ""}`}
+                        />
                       </TableCell>
                       <TableCell className="capitalize">{product.unit}</TableCell>
                       <TableCell className="font-semibold">
