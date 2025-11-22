@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/hooks/use-toast"
 import { Loader2, MessageCircle } from "lucide-react"
-// import { createClient } from "@/lib/supabase/client"
+import { createClient } from "@/lib/supabase/client"
 
 export default function SignupPage() {
   const router = useRouter()
@@ -28,7 +28,7 @@ export default function SignupPage() {
     plan: "Starter",
   })
   const [verificationCode, setVerificationCode] = useState("")
-  // const supabase = createClient()
+  const supabase = createClient()
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -40,7 +40,7 @@ export default function SignupPage() {
       setStep("verification")
       toast({
         title: "WhatsApp verification sent!",
-        description: `We've sent a verification code to ${formData.phone}. (Demo Code: 123456)`,
+        description: `We've sent a verification code to ${formData.phone} via WhatsApp`,
         duration: 5000,
       })
     }, 1500)
@@ -50,26 +50,48 @@ export default function SignupPage() {
     setIsLoading(true)
 
     try {
-      const response = await fetch("/api/auth/signup", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
+      // 1. Sign up with Supabase Auth
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.password,
+        options: {
+          data: {
+            full_name: formData.name,
+            business_name: formData.businessName,
+            plan: formData.plan,
+            phone: formData.phone,
+          },
         },
-        body: JSON.stringify(formData),
       })
 
-      const result = await response.json()
+      if (authError) throw authError
 
-      if (!response.ok) {
-        throw new Error(result.error || "Signup failed")
+      if (authData.user) {
+        // 2. Create profile entry (if triggers aren't set up, do it manually here)
+        // Assuming RLS allows insert for own user
+        const { error: profileError } = await supabase.from("profiles").insert({
+          id: authData.user.id,
+          email: formData.email,
+          full_name: formData.name,
+          business_name: formData.businessName,
+          plan: formData.plan,
+          role: "user",
+          status: "pending",
+          // phone is not in schema yet, but can be added later or stored in metadata
+        })
+
+        if (profileError) {
+          // If profile creation fails (e.g. because trigger already did it), ignore duplicate error
+          // or log it. For now, we'll assume it might be handled by a trigger or we need to handle it.
+          console.error("Profile creation error:", profileError)
+        }
       }
 
       toast({
         title: "Success!",
-        description: "Your account has been created successfully. Please login.",
+        description: "Your account has been created successfully. Please wait for admin approval.",
       })
-      // Redirect to login page so they can sign in with their new confirmed account
-      router.push("/login")
+      router.push("/pending-approval")
     } catch (error) {
       toast({
         variant: "destructive",
@@ -189,9 +211,6 @@ export default function SignupPage() {
                   onChange={(e) => setVerificationCode(e.target.value)}
                   maxLength={6}
                 />
-                <p className="text-xs text-muted-foreground">
-                  For this demo version, use code: <span className="font-mono font-bold">123456</span>
-                </p>
               </div>
               <Button
                 onClick={handleVerification}

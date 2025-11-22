@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
-import { createClient } from "@supabase/supabase-js"
+import { sql } from "@/lib/db"
+import { hashPassword } from "@/lib/auth-neon"
 
 export async function POST(request: Request) {
   try {
@@ -9,53 +10,28 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
     }
 
-    // Note: This requires SUPABASE_SERVICE_ROLE_KEY to be set in environment variables
-    const supabaseAdmin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-      },
-    })
-
-    // 1. Create the user using Admin API to bypass email confirmation
-    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
-      email,
-      password,
-      email_confirm: true, // Auto-confirm the user
-      user_metadata: {
-        full_name: name,
-        business_name: businessName,
-        plan: plan,
-        phone: phone,
-      },
-    })
-
-    if (authError) {
-      return NextResponse.json({ error: authError.message }, { status: 400 })
+    // Check if user already exists
+    const existingUsers = await sql`SELECT * FROM profiles WHERE email = ${email}`
+    if (existingUsers.length > 0) {
+      return NextResponse.json({ error: "User already exists" }, { status: 400 })
     }
 
-    if (!authData.user) {
-      return NextResponse.json({ error: "Failed to create user" }, { status: 500 })
-    }
+    const passwordHash = await hashPassword(password)
 
-    // 2. Create profile entry
-    // We can use the same admin client to bypass any RLS issues during signup
-    const { error: profileError } = await supabaseAdmin.from("profiles").insert({
-      id: authData.user.id,
-      email: email,
-      full_name: name,
-      business_name: businessName,
-      plan: plan,
-      role: "user",
-      status: "pending", // Keeping 'pending' for admin approval if that's the workflow, but auth is active
-    })
+    // Create new user
+    // Note: phone is not in the profiles table schema I created earlier, so I'll skip it for now or add it to profiles if needed.
+    // The schema has: id, email, full_name, role, password_hash, business_name, status, plan, created_at, updated_at
+    // I'll map 'name' to 'full_name' and 'businessName' to 'business_name'
 
-    if (profileError) {
-      console.error("Profile creation error:", profileError)
-      // We don't return error here as the user account is already created
-    }
+    const result = await sql`
+      INSERT INTO profiles (email, password_hash, role, full_name, business_name, plan, status)
+      VALUES (${email}, ${passwordHash}, 'user', ${name}, ${businessName}, ${plan}, 'pending')
+      RETURNING id, email, full_name, role, business_name, plan, status
+    `
 
-    return NextResponse.json({ success: true, user: authData.user })
+    const newUser = result[0]
+
+    return NextResponse.json({ success: true, user: newUser })
   } catch (error) {
     console.error("Signup error:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })

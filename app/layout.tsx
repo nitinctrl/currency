@@ -2,7 +2,6 @@ import type React from "react"
 import type { Metadata } from "next"
 import { Geist, Geist_Mono } from "next/font/google"
 import "./globals.css"
-import { AuthProvider } from "@/contexts/auth-context"
 // import { AIChatbotWidget } from "@/components/ai-chatbot-widget"
 
 const _geist = Geist({ subsets: ["latin"] })
@@ -35,7 +34,7 @@ export default function RootLayout({
         <meta name="theme-color" content="#0ea5e9" />
       </head>
       <body className={`font-sans antialiased`}>
-        <AuthProvider>{children}</AuthProvider>
+        {children}
         {/* <AIChatbotWidget /> */}
       </body>
     </html>

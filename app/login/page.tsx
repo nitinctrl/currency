@@ -5,6 +5,7 @@ import type React from "react"
 import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -20,7 +21,6 @@ import {
   getRemainingLockoutTime,
   MAX_ATTEMPTS,
 } from "@/lib/auth-security"
-import { setUser } from "@/lib/auth"
 
 export default function LoginPage() {
   const router = useRouter()
@@ -47,38 +47,39 @@ export default function LoginPage() {
     }
 
     try {
-      const response = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+      const supabase = createClient()
+
+      const { data, error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
       })
 
-      const data = await response.json()
+      if (signInError) {
+        recordLoginAttempt(email, false)
+        const failedAttempts = getFailedAttempts(email)
 
-      if (!response.ok) {
-        if (response.status === 429) {
+        if (failedAttempts >= MAX_ATTEMPTS) {
+          lockAccount(email)
+          setError(
+            `Account locked for 30 minutes due to ${MAX_ATTEMPTS} failed login attempts. A password reset email can be sent to unlock your account.`,
+          )
           setLockoutInfo({ locked: true })
-          setError(data.error)
         } else {
-          recordLoginAttempt(email, false)
-          const failedAttempts = getFailedAttempts(email)
-          if (failedAttempts >= MAX_ATTEMPTS) {
-            lockAccount(email)
-            setError(`Account locked for 30 minutes due to ${MAX_ATTEMPTS} failed login attempts.`)
-            setLockoutInfo({ locked: true })
-          } else {
-            setError(data.error || "Invalid email or password")
-          }
+          const remaining = MAX_ATTEMPTS - failedAttempts
+          setError(
+            `Invalid email or password. ${remaining} attempt${remaining !== 1 ? "s" : ""} remaining before account lockout.`,
+          )
         }
         setLoading(false)
         return
       }
 
-      if (data.success && data.user) {
+      if (data.user) {
         recordLoginAttempt(email, true)
         clearLoginAttempts(email)
 
-        const profile = data.user // The API returns merged user + profile
+        // Get user profile to determine role
+        const { data: profile } = await supabase.from("profiles").select("role, status").eq("id", data.user.id).single()
 
         if (!profile) {
           setError("User profile not found")
@@ -91,19 +92,6 @@ export default function LoginPage() {
           setLoading(false)
           return
         }
-
-        // Mapping Supabase profile to the User interface expected by lib/types
-        setUser({
-          id: profile.id,
-          email: profile.email!,
-          name: profile.full_name || profile.name || "",
-          role: profile.role,
-          status: profile.status,
-          businessName: profile.business_name,
-          plan: profile.plan || "Free",
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        })
 
         // Redirect based on role
         let redirectPath = "/dashboard"

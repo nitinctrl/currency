@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { createClient } from "@/lib/supabase/server"
+import { sql } from "@/lib/db"
 
 export async function POST(request: Request) {
   try {
@@ -9,30 +9,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Email is required" }, { status: 400 })
     }
 
-    // We should strictly check if the authenticated user matches the email being updated
-    const supabase = await createClient()
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
-
-    if (user.email !== email) {
-      return NextResponse.json({ error: "Forbidden: You can only update your own profile" }, { status: 403 })
-    }
-
-    const { error } = await supabase
-      .from("profiles")
-      .update({
-        full_name: name,
-        business_name: businessName,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("email", email)
-
-    if (error) throw error
+    await sql`
+      UPDATE profiles 
+      SET full_name = ${name}, 
+          business_name = ${businessName},
+          updated_at = NOW()
+      WHERE email = ${email}
+    `
 
     return NextResponse.json({ success: true })
   } catch (error) {

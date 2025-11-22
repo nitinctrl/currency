@@ -16,22 +16,22 @@ export function PlanUpgradeBanner() {
   const upgradeSuggestions: Record<string, { plan: string; price: string; benefit: string }> = {
     Free: {
       plan: "Starter",
-      price: "₹1,599",
+      price: "₹499",
       benefit: "Unlimited invoices and quotations",
     },
     Starter: {
       plan: "Professional",
-      price: "₹2,999",
+      price: "₹799",
       benefit: "Full accounting and unlimited CRM",
     },
     Professional: {
       plan: "Professional + POS",
-      price: "₹3,999",
+      price: "₹1,098",
       benefit: "POS System with Barcode Scanner",
     },
     "Professional + POS": {
       plan: "Enterprise",
-      price: "₹5,999",
+      price: "₹1,999",
       benefit: "Multi-user access and advanced features",
     },
   }

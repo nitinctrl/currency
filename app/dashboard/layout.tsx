@@ -1,3 +1,5 @@
+"use client"
+
 import type React from "react"
 import { DashboardLayout } from "@/components/dashboard-layout"
 

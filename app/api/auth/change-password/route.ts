@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
-import { createClient } from "@/lib/supabase/server"
+import { sql } from "@/lib/db"
+import { hashPassword, verifyPassword } from "@/lib/auth-neon"
 
 export async function POST(request: Request) {
   try {
@@ -9,26 +10,29 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
     }
 
-    const supabase = await createClient()
+    // Verify current password
+    const users = await sql`SELECT * FROM profiles WHERE email = ${email}`
+    const user = users[0]
 
-    // First verify credentials by signing in
-    const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-      email,
-      password: currentPassword,
-    })
+    if (!user || !user.password_hash) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 })
+    }
 
-    if (signInError) {
+    const isValid = await verifyPassword(currentPassword, user.password_hash)
+
+    if (!isValid) {
       return NextResponse.json({ error: "Incorrect current password" }, { status: 401 })
     }
 
-    // Update password for the authenticated user
-    const { error: updateError } = await supabase.auth.updateUser({
-      password: newPassword,
-    })
+    // Update password
+    const newPasswordHash = await hashPassword(newPassword)
 
-    if (updateError) {
-      return NextResponse.json({ error: updateError.message }, { status: 400 })
-    }
+    await sql`
+      UPDATE profiles 
+      SET password_hash = ${newPasswordHash},
+          updated_at = NOW()
+      WHERE email = ${email}
+    `
 
     return NextResponse.json({ success: true })
   } catch (error) {

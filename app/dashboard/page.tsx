@@ -4,7 +4,6 @@ import { useEffect, useState } from "react"
 import { AuthGuard } from "@/components/auth-guard"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { PlanUpgradeBanner } from "@/components/plan-upgrade-banner"
-import { DashboardInsights } from "@/components/dashboard-insights"
 import { AISearchBar } from "@/components/ai-search-bar"
 import { FileText, Users, Package, TrendingUp, IndianRupee, Clock } from "lucide-react"
 import { MOCK_INVOICES } from "@/lib/mock-data"
@@ -33,7 +32,6 @@ const profitLossData = [
 
 export default function DashboardPage() {
   const { user } = useAuth()
-  const [mounted, setMounted] = useState(false) // Added mounted state for client-side rendering check
   const [stats, setStats] = useState({
     totalInvoices: 0,
     paidInvoices: 0,
@@ -53,7 +51,6 @@ export default function DashboardPage() {
   ])
 
   useEffect(() => {
-    setMounted(true) // Set mounted to true after hydration
     if (!user) return
 
     const fetchStats = async () => {
@@ -113,8 +110,6 @@ export default function DashboardPage() {
     }
   }, [user])
 
-  if (!mounted) return null
-
   return (
     <AuthGuard requireApproved>
       <div className="space-y-6">
@@ -124,8 +119,6 @@ export default function DashboardPage() {
         </div>
 
         <PlanUpgradeBanner />
-
-        <DashboardInsights />
 
         <AISearchBar />
 

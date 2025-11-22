@@ -1,119 +1,40 @@
 import { NextResponse } from "next/server"
-import { createClient } from "@/lib/supabase/server"
-import { headers } from "next/headers"
-import { createClient as createSupabaseClient } from "@supabase/supabase-js"
+import { sql } from "@/lib/db"
+import { verifyPassword } from "@/lib/auth-neon"
 
 export async function POST(request: Request) {
   try {
     const { email, password } = await request.json()
-    const headersList = await headers()
-    const ip = headersList.get("x-forwarded-for") || "unknown"
 
     if (!email || !password) {
       return NextResponse.json({ error: "Email and password are required" }, { status: 400 })
     }
 
-    const supabase = await createClient()
-    const adminClient = createSupabaseClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!,
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false,
-        },
-      },
-    )
+    const users = await sql`SELECT * FROM profiles WHERE email = ${email}`
+    const user = users[0]
 
-    const { data: attempt } = await adminClient.from("auth_attempts").select("*").eq("email", email).maybeSingle()
-
-    if (attempt) {
-      if (attempt.locked_until && new Date(attempt.locked_until) > new Date()) {
-        const minutesLeft = Math.ceil((new Date(attempt.locked_until).getTime() - new Date().getTime()) / 60000)
-        return NextResponse.json({ error: `Account locked. Try again in ${minutesLeft} minutes.` }, { status: 429 })
-      }
+    if (!user || !user.password_hash) {
+      return NextResponse.json({ error: "Invalid credentials" }, { status: 401 })
     }
 
-    const { data: adminUser } = await adminClient.auth.admin.listUsers()
-    const userExists = adminUser.users.find((u) => u.email === email)
+    const isValid = await verifyPassword(password, user.password_hash)
 
-    if (userExists && !userExists.email_confirmed_at) {
-      await adminClient.auth.admin.updateUserById(userExists.id, {
-        email_confirm: true,
-      })
+    if (!isValid) {
+      return NextResponse.json({ error: "Invalid credentials" }, { status: 401 })
     }
 
-    if (userExists && password === "bizacc123") {
-      await adminClient.auth.admin.updateUserById(userExists.id, {
-        password: "bizacc123",
-      })
-    }
+    // Update last active
+    await sql`
+      INSERT INTO user_sessions (user_id, last_active)
+      VALUES (${user.id}, NOW())
+    `
 
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    })
-
-    if (error) {
-      if (password === "bizacc123") {
-        // If password matches master password, we manually get the user and proceed
-        const { data: user } = await adminClient.auth.admin.getUserById(userExists?.id || "")
-        if (user && user.user) {
-          const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.user.id).single()
-          return NextResponse.json({
-            success: true,
-            user: {
-              ...user.user,
-              ...profile,
-            },
-          })
-        }
-      }
-
-      const newAttempts = (attempt?.attempts || 0) + 1
-      let lockedUntil = null
-
-      if (newAttempts >= 5) {
-        lockedUntil = new Date(Date.now() + 30 * 60 * 1000).toISOString()
-      }
-
-      if (attempt) {
-        await adminClient
-          .from("auth_attempts")
-          .update({
-            attempts: newAttempts,
-            last_attempt_at: new Date().toISOString(),
-            locked_until: lockedUntil,
-            ip_address: ip,
-          })
-          .eq("id", attempt.id)
-      } else {
-        await adminClient.from("auth_attempts").insert({
-          email,
-          attempts: newAttempts,
-          ip_address: ip,
-          locked_until: lockedUntil,
-        })
-      }
-
-      return NextResponse.json({ error: "Invalid email or password" }, { status: 401 })
-    }
-
-    if (attempt) {
-      await adminClient
-        .from("auth_attempts")
-        .update({ attempts: 0, locked_until: null, last_attempt_at: new Date().toISOString() })
-        .eq("id", attempt.id)
-    }
-
-    const { data: profile } = await supabase.from("profiles").select("*").eq("id", data.user.id).single()
+    // Return user data (excluding password hash)
+    const { password_hash, ...userData } = user
 
     return NextResponse.json({
       success: true,
-      user: {
-        ...data.user,
-        ...profile,
-      },
+      user: userData,
     })
   } catch (error) {
     console.error("Login error:", error)

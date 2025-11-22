@@ -1,52 +1,44 @@
 import { NextResponse } from "next/server"
-import { createClient } from "@/lib/supabase/server"
+import { sql } from "@/lib/db"
 
 export async function GET(request: Request) {
   try {
-    const supabase = await createClient()
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
+    const { searchParams } = new URL(request.url)
+    const email = searchParams.get("email")
 
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    if (!email) {
+      return NextResponse.json({ error: "Email is required" }, { status: 400 })
     }
 
-    // Fetch stats using Supabase
-    // We can use .count() for totals to avoid fetching all data if we just need the count
-    // But for revenue we need the data.
+    const users = await sql`SELECT id FROM profiles WHERE email = ${email}`
+    const user = users[0]
 
-    const { data: invoices, error: invoicesError } = await supabase.from("invoices").select("*").eq("user_id", user.id)
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 })
+    }
 
-    if (invoicesError) throw invoicesError
-
-    const { count: totalCustomers, error: customersError } = await supabase
-      .from("customers")
-      .select("*", { count: "exact", head: true })
-      .eq("user_id", user.id)
-
-    if (customersError) throw customersError
+    // Fetch stats
+    const invoices = await sql`SELECT * FROM invoices WHERE user_id = ${user.id}`
+    const customers = await sql`SELECT * FROM customers WHERE user_id = ${user.id}`
 
     const totalInvoices = invoices.length
-    const paidInvoices = invoices.filter((inv) => inv.status === "paid").length
-
-    // Note: Ensure total_amount is a number or can be converted
+    const paidInvoices = invoices.filter((inv: any) => inv.status === "paid").length
     const totalRevenue = invoices
-      .filter((inv) => inv.status === "paid")
-      .reduce((sum, inv) => sum + (Number(inv.total) || Number(inv.total_amount) || 0), 0)
+      .filter((inv: any) => inv.status === "paid")
+      .reduce((sum: number, inv: any) => sum + Number(inv.total_amount), 0)
 
     const pendingAmount = invoices
-      .filter((inv) => inv.status === "sent" || inv.status === "overdue")
-      .reduce((sum, inv) => sum + (Number(inv.total) || Number(inv.total_amount) || 0), 0)
+      .filter((inv: any) => inv.status === "sent" || inv.status === "overdue")
+      .reduce((sum: number, inv: any) => sum + Number(inv.total_amount), 0)
 
-    const overdueInvoices = invoices.filter((inv) => inv.status === "overdue").length
+    const overdueInvoices = invoices.filter((inv: any) => inv.status === "overdue").length
 
     return NextResponse.json({
       totalInvoices,
       paidInvoices,
       totalRevenue,
       pendingAmount,
-      totalCustomers: totalCustomers || 0,
+      totalCustomers: customers.length,
       overdueInvoices,
     })
   } catch (error) {

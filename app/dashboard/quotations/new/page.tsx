@@ -1,34 +1,27 @@
 "use client"
+
+import type React from "react"
 import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter } from 'next/navigation'
 import { AuthGuard } from "@/components/auth-guard"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
-import { toast } from "@/hooks/use-toast"
-import { ArrowLeft, Plus, Trash2, Save, Send } from "lucide-react"
-import { createClient } from "@/lib/supabase/client"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { toast } from "@/components/ui/use-toast"
+import { ArrowLeft, Plus, Trash2, Save, Send } from 'lucide-react'
 import { getUser } from "@/lib/auth"
 
 export default function NewQuotationPage() {
   const router = useRouter()
   const user = getUser()
-  const supabase = createClient()
 
   const [customers, setCustomers] = useState<any[]>([])
   const [showNewCustomerDialog, setShowNewCustomerDialog] = useState(false)
-
+  
   const today = new Date().toISOString().split("T")[0]
 
   const [formData, setFormData] = useState({
@@ -52,24 +45,16 @@ export default function NewQuotationPage() {
     pincode: "",
   })
 
-  const [items, setItems] = useState([{ id: "1", description: "", hsn: "", quantity: 1, rate: 0, gst: 18, amount: 0 }])
+  const [items, setItems] = useState([
+    { id: "1", description: "", hsn: "", quantity: 1, rate: 0, gst: 18, amount: 0 },
+  ])
 
   useEffect(() => {
-    const fetchCustomers = async () => {
-      // Fetch from Supabase instead of localStorage
-      const { data } = await supabase.from("customers").select("*").order("created_at", { ascending: false })
-      if (data) {
-        setCustomers(data)
-      } else {
-        // Fallback for legacy
-        const storedContacts = localStorage.getItem("contacts")
-        if (storedContacts) {
-          const allContacts = JSON.parse(storedContacts)
-          setCustomers(allContacts.filter((c: any) => c.type === "customer"))
-        }
-      }
+    const storedContacts = localStorage.getItem("contacts")
+    if (storedContacts) {
+      const allContacts = JSON.parse(storedContacts)
+      setCustomers(allContacts.filter((c: any) => c.type === "customer"))
     }
-    fetchCustomers()
   }, [])
 
   const addItem = () => {
@@ -107,50 +92,29 @@ export default function NewQuotationPage() {
     return { subtotal, gstAmount, total }
   }
 
-  const handleAddCustomer = async () => {
+  const handleAddCustomer = () => {
     if (!user || !newCustomer.name || !newCustomer.phone) {
       toast({ title: "Error", description: "Name and phone are required", variant: "destructive" })
       return
     }
-
-    // Insert into Supabase
-    const { data, error } = await supabase
-      .from("customers")
-      .insert({
-        user_id: user.id,
-        name: newCustomer.name,
-        email: newCustomer.email,
-        phone: newCustomer.phone,
-        gst_number: newCustomer.gstin,
-        address: newCustomer.address,
-        city: newCustomer.city,
-        state: newCustomer.state,
-        pincode: newCustomer.pincode,
-        notes: newCustomer.company ? `Company: ${newCustomer.company}` : "",
-      })
-      .select()
-      .single()
-
-    if (error) {
-      console.error("Error adding customer:", error)
-      toast({ title: "Error", description: "Failed to add customer", variant: "destructive" })
-      return
+    
+    const customer = {
+      id: Date.now().toString(),
+      userId: user.id,
+      type: "customer" as const,
+      ...newCustomer,
+      createdAt: new Date().toISOString(),
     }
 
-    setCustomers([data, ...customers])
-    setFormData({ ...formData, customerId: data.id })
+    const storedContacts = localStorage.getItem("contacts")
+    const allContacts = storedContacts ? JSON.parse(storedContacts) : []
+    allContacts.push(customer)
+    localStorage.setItem("contacts", JSON.stringify(allContacts))
+
+    setCustomers([...customers, customer])
+    setFormData({ ...formData, customerId: customer.id })
     setShowNewCustomerDialog(false)
-    setNewCustomer({
-      name: "",
-      company: "",
-      email: "",
-      phone: "",
-      gstin: "",
-      address: "",
-      city: "",
-      state: "",
-      pincode: "",
-    })
+    setNewCustomer({ name: "", company: "", email: "", phone: "", gstin: "", address: "", city: "", state: "", pincode: "" })
 
     toast({ title: "Success!", description: "Customer added successfully" })
   }
@@ -183,28 +147,27 @@ export default function NewQuotationPage() {
     localStorage.setItem("quotations", JSON.stringify(all))
 
     if (shareWhatsApp) {
-      const customer = customers.find((c) => c.id === formData.customerId)
+      const customer = customers.find(c => c.id === formData.customerId)
       if (customer?.phone) {
         const quotationData = {
           ...quotation,
           customerName: customer.name,
-          customerCompany:
-            customer.company || (customer.notes?.startsWith("Company:") ? customer.notes.replace("Company: ", "") : ""),
+          customerCompany: customer.company,
           customerAddress: customer.address,
           customerCity: customer.city,
           customerState: customer.state,
           customerPincode: customer.pincode,
           customerPhone: customer.phone,
-          customerGstin: customer.gst_number || customer.gstin,
+          customerGstin: customer.gstin,
           companyName: formData.companyName,
-          companyLogo: formData.companyLogo,
+          companyLogo: formData.companyLogo
         }
         const encodedData = btoa(JSON.stringify(quotationData))
         const publicLink = `${window.location.origin}/public/quotation/view?data=${encodedData}`
 
         const message = `Hi ${customer.name}! Here's your quotation ${quotationNumber} from ${formData.companyName}. Total: ₹${total.toLocaleString()}. View & Download PDF here: ${publicLink}`
-        const whatsappUrl = `https://wa.me/${customer.phone.replace(/\D/g, "")}?text=${encodeURIComponent(message)}`
-        window.open(whatsappUrl, "_blank")
+        const whatsappUrl = `https://wa.me/${customer.phone.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`
+        window.open(whatsappUrl, '_blank')
       }
     }
 
@@ -372,7 +335,7 @@ export default function NewQuotationPage() {
                     </DialogContent>
                   </Dialog>
                 </div>
-
+                
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-2">
                     <Label>Quotation Date</Label>
@@ -524,7 +487,7 @@ export default function NewQuotationPage() {
                 <Send className="mr-2 h-4 w-4" />
                 Save & Share via WhatsApp
               </Button>
-              <Button variant="outline" className="w-full bg-transparent" onClick={() => router.back()}>
+              <Button variant="outline" className="w-full" onClick={() => router.back()}>
                 Cancel
               </Button>
             </div>

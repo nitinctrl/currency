@@ -1,23 +1,13 @@
 import { NextResponse } from "next/server"
-import { createClient as createSupabaseClient } from "@supabase/supabase-js"
+import { sql } from "@/lib/db"
+import { hashPassword } from "@/lib/auth-neon"
 
 export async function POST() {
   try {
-    const supabaseAdmin = createSupabaseClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!,
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false,
-        },
-      },
-    )
-
     const defaultUsers = [
       {
         email: "admin@bizacc.in",
-        password: "bizacc123", // Updated to default password
+        password: "BizAcc@SuperAdmin2025!",
         role: "superadmin",
         name: "Super Admin",
         business_name: "BizAcc Platform",
@@ -25,7 +15,7 @@ export async function POST() {
       },
       {
         email: "wildknot01@gmail.com",
-        password: "bizacc123", // Updated to default password
+        password: "Wildknot@Admin2025!",
         role: "admin",
         name: "Wildknot Admin",
         business_name: "Wildknot Solutions",
@@ -33,7 +23,7 @@ export async function POST() {
       },
       {
         email: "nygifting@gmail.com",
-        password: "bizacc123", // Updated to default password
+        password: "NyGift@User2025!",
         role: "user",
         name: "NY Gifting",
         business_name: "NY Gifting Store",
@@ -44,69 +34,31 @@ export async function POST() {
     const results = []
 
     for (const user of defaultUsers) {
-      // Check if user exists in Auth
-      // We can list users by email using admin api
-      const {
-        data: { users },
-        error: listError,
-      } = await supabaseAdmin.auth.admin.listUsers()
+      // Check if user already exists
+      const existingUsers = await sql`SELECT * FROM profiles WHERE email = ${user.email}`
 
-      // Filter manually since listUsers doesn't support filtering by email directly in all versions/adapters easily
-      // or use getUserById if we had ID.
-      // Actually, let's try to create and catch error if exists
-
-      let userId = null
-      const existingUser = users.find((u) => u.email === user.email)
-
-      if (existingUser) {
-        userId = existingUser.id
-        // Update password if needed
-        await supabaseAdmin.auth.admin.updateUserById(userId, {
-          password: user.password,
-          user_metadata: {
-            full_name: user.name,
-            business_name: user.business_name,
-            plan: user.plan,
-          },
-        })
-        results.push({ email: user.email, status: "updated_auth" })
+      if (existingUsers.length > 0) {
+        // Update existing user
+        const passwordHash = await hashPassword(user.password)
+        await sql`
+          UPDATE profiles 
+          SET password_hash = ${passwordHash}, 
+              role = ${user.role}, 
+              full_name = ${user.name}, 
+              business_name = ${user.business_name},
+              plan = ${user.plan},
+              status = 'approved'
+          WHERE email = ${user.email}
+        `
+        results.push({ email: user.email, status: "updated" })
       } else {
-        const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
-          email: user.email,
-          password: user.password,
-          email_confirm: true,
-          user_metadata: {
-            full_name: user.name,
-            business_name: user.business_name,
-            plan: user.plan,
-          },
-        })
-
-        if (createError) {
-          console.error(`Failed to create user ${user.email}:`, createError)
-          results.push({ email: user.email, status: "failed", error: createError.message })
-          continue
-        }
-        userId = newUser.user.id
-        results.push({ email: user.email, status: "created_auth" })
-      }
-
-      // Now sync with profiles table
-      if (userId) {
-        const { error: upsertError } = await supabaseAdmin.from("profiles").upsert({
-          id: userId,
-          email: user.email,
-          full_name: user.name,
-          business_name: user.business_name,
-          plan: user.plan,
-          role: user.role,
-          status: "approved",
-          updated_at: new Date().toISOString(),
-        })
-
-        if (upsertError) {
-          console.error(`Failed to update profile for ${user.email}:`, upsertError)
-        }
+        // Create new user
+        const passwordHash = await hashPassword(user.password)
+        await sql`
+          INSERT INTO profiles (email, password_hash, role, full_name, business_name, plan, status)
+          VALUES (${user.email}, ${passwordHash}, ${user.role}, ${user.name}, ${user.business_name}, ${user.plan}, 'approved')
+        `
+        results.push({ email: user.email, status: "created" })
       }
     }
 
