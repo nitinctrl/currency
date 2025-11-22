@@ -33,6 +33,7 @@ const profitLossData = [
 
 export default function DashboardPage() {
   const { user } = useAuth()
+  const [mounted, setMounted] = useState(false) // Added mounted state for client-side rendering check
   const [stats, setStats] = useState({
     totalInvoices: 0,
     paidInvoices: 0,
@@ -52,6 +53,7 @@ export default function DashboardPage() {
   ])
 
   useEffect(() => {
+    setMounted(true) // Set mounted to true after hydration
     if (!user) return
 
     const fetchStats = async () => {
@@ -110,6 +112,8 @@ export default function DashboardPage() {
       setPurchaseVsSalesData(chartData)
     }
   }, [user])
+
+  if (!mounted) return null
 
   return (
     <AuthGuard requireApproved>
