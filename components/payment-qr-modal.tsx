@@ -47,7 +47,7 @@ export function PaymentQRModal({
         },
       })
     } catch (error) {
-      console.error("[v0] QR Code generation error:", error)
+      console.error("QR Code generation error:", error)
     }
   }
 

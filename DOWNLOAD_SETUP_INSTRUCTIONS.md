@@ -72,7 +72,7 @@ const downloadUrls: Record<string, string> = {
 
 The API route logs all download requests:
 \`\`\`
-[v0] Download requested for platform: windows
+Download requested for platform: windows
 \`\`\`
 
 You can extend this to track:

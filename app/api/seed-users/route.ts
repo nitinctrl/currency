@@ -7,7 +7,7 @@ export async function POST() {
     const defaultUsers = [
       {
         email: "admin@bizacc.in",
-        password: "BizAcc@SuperAdmin2025!",
+        password: "123456",
         role: "superadmin",
         name: "Super Admin",
         business_name: "BizAcc Platform",
@@ -15,7 +15,7 @@ export async function POST() {
       },
       {
         email: "wildknot01@gmail.com",
-        password: "Wildknot@Admin2025!",
+        password: "123456",
         role: "admin",
         name: "Wildknot Admin",
         business_name: "Wildknot Solutions",
@@ -23,7 +23,7 @@ export async function POST() {
       },
       {
         email: "nygifting@gmail.com",
-        password: "NyGift@User2025!",
+        password: "123456",
         role: "user",
         name: "NY Gifting",
         business_name: "NY Gifting Store",

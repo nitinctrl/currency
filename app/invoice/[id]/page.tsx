@@ -37,7 +37,7 @@ export default function InvoicePreviewPage() {
         const upiString = `upi://pay?pa=${parsedSettings?.upiId || "merchant@upi"}&pn=${parsedSettings?.companyName || "Company"}&am=${foundInvoice.total}&cu=INR&tn=Invoice ${foundInvoice.invoiceNumber}`
         QRCode.toDataURL(upiString)
           .then((url) => setQrCodeUrl(url))
-          .catch((err) => console.error("[v0] QR code generation error:", err))
+          .catch((err) => console.error("QR code generation error:", err))
 
         // Load customer
         const contacts = localStorage.getItem("contacts")

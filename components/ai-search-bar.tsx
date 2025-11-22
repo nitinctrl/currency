@@ -16,7 +16,7 @@ export function AISearchBar() {
   const [dateTo, setDateTo] = useState<Date>()
 
   const handleSearch = () => {
-    console.log("[v0] Search:", { searchQuery, searchCategory, dateFrom, dateTo })
+    console.log("Search:", { searchQuery, searchCategory, dateFrom, dateTo })
     // Implement search logic here
   }
 

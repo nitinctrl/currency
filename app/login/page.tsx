@@ -5,22 +5,11 @@ import type React from "react"
 import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Mail, AlertTriangle } from "lucide-react"
-import {
-  recordLoginAttempt,
-  getFailedAttempts,
-  isAccountLocked,
-  lockAccount,
-  clearLoginAttempts,
-  sendPasswordResetEmail,
-  getRemainingLockoutTime,
-  MAX_ATTEMPTS,
-} from "@/lib/auth-security"
 
 export default function LoginPage() {
   const router = useRouter()
@@ -28,76 +17,34 @@ export default function LoginPage() {
   const [password, setPassword] = useState("")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
-  const [lockoutInfo, setLockoutInfo] = useState<{ locked: boolean; unlockTime?: number }>({ locked: false })
-  const [resetEmailSent, setResetEmailSent] = useState(false)
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setError("")
 
-    const lockStatus = isAccountLocked(email)
-    if (lockStatus.locked) {
-      setLockoutInfo(lockStatus)
-      setError(
-        `Account locked due to too many failed attempts. Try again in ${getRemainingLockoutTime(lockStatus.unlockTime!)}.`,
-      )
-      setLoading(false)
-      return
-    }
-
     try {
-      const supabase = createClient()
-
-      const { data, error: signInError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, password }),
       })
 
-      if (signInError) {
-        recordLoginAttempt(email, false)
-        const failedAttempts = getFailedAttempts(email)
+      const data = await response.json()
 
-        if (failedAttempts >= MAX_ATTEMPTS) {
-          lockAccount(email)
-          setError(
-            `Account locked for 30 minutes due to ${MAX_ATTEMPTS} failed login attempts. A password reset email can be sent to unlock your account.`,
-          )
-          setLockoutInfo({ locked: true })
-        } else {
-          const remaining = MAX_ATTEMPTS - failedAttempts
-          setError(
-            `Invalid email or password. ${remaining} attempt${remaining !== 1 ? "s" : ""} remaining before account lockout.`,
-          )
-        }
+      if (!response.ok) {
+        setError(data.error || "Invalid email or password")
         setLoading(false)
         return
       }
 
-      if (data.user) {
-        recordLoginAttempt(email, true)
-        clearLoginAttempts(email)
-
-        // Get user profile to determine role
-        const { data: profile } = await supabase.from("profiles").select("role, status").eq("id", data.user.id).single()
-
-        if (!profile) {
-          setError("User profile not found")
-          setLoading(false)
-          return
-        }
-
-        if (profile.status !== "approved" && profile.role !== "superadmin") {
-          setError("Your account is pending approval")
-          setLoading(false)
-          return
-        }
-
-        // Redirect based on role
+      if (data.success && data.user) {
         let redirectPath = "/dashboard"
-        if (profile.role === "superadmin") {
+        if (data.user.role === "superadmin") {
           redirectPath = "/superadmin"
-        } else if (profile.role === "admin") {
+        } else if (data.user.role === "admin") {
           redirectPath = "/admin"
         }
 
@@ -109,19 +56,6 @@ export default function LoginPage() {
     } finally {
       setLoading(false)
     }
-  }
-
-  const handleSendResetEmail = async () => {
-    setLoading(true)
-    const result = await sendPasswordResetEmail(email)
-    if (result.success) {
-      setResetEmailSent(true)
-      clearLoginAttempts(email)
-      setError("")
-    } else {
-      setError(result.error || "Failed to send reset email")
-    }
-    setLoading(false)
   }
 
   return (
@@ -147,13 +81,6 @@ export default function LoginPage() {
               </div>
             )}
 
-            {resetEmailSent && (
-              <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded text-sm">
-                Password reset email sent! Check your inbox and follow the instructions to reset your password and
-                unlock your account.
-              </div>
-            )}
-
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
@@ -170,9 +97,6 @@ export default function LoginPage() {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label htmlFor="password">Password</Label>
-                <Link href="/forgot-password" className="text-sm text-blue-600 hover:underline">
-                  Forgot password?
-                </Link>
               </div>
               <Input
                 id="password"
@@ -181,23 +105,11 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                disabled={loading || lockoutInfo.locked}
+                disabled={loading}
               />
             </div>
 
-            {lockoutInfo.locked && (
-              <Button
-                type="button"
-                onClick={handleSendResetEmail}
-                variant="outline"
-                className="w-full bg-transparent"
-                disabled={loading || resetEmailSent}
-              >
-                {resetEmailSent ? "Reset Email Sent" : "Send Password Reset Email to Unlock"}
-              </Button>
-            )}
-
-            <Button type="submit" className="w-full" disabled={loading || lockoutInfo.locked}>
+            <Button type="submit" className="w-full" disabled={loading}>
               {loading ? "Signing in..." : "Sign In"}
             </Button>
           </form>

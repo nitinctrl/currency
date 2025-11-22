@@ -15,9 +15,6 @@ export async function GET(request: NextRequest, { params }: { params: { platform
     return NextResponse.json({ error: "Invalid platform. Use: windows, macos, or linux" }, { status: 400 })
   }
 
-  // Log download for analytics
-  console.log(`[v0] Download requested for platform: ${platform}`)
-
   // Redirect to the actual download URL
   return NextResponse.redirect(downloadUrls[platform])
 }

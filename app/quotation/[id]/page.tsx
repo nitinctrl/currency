@@ -36,7 +36,7 @@ export default function QuotationPreviewPage() {
         const upiString = `upi://pay?pa=${parsedSettings?.upiId || "merchant@upi"}&pn=${parsedSettings?.companyName || "Company"}&am=${foundQuotation.total}&cu=INR&tn=Quotation ${foundQuotation.quotationNumber}`
         QRCode.toDataURL(upiString)
           .then((url) => setQrCodeUrl(url))
-          .catch((err) => console.error("[v0] QR code generation error:", err))
+          .catch((err) => console.error("QR code generation error:", err))
 
         const contacts = localStorage.getItem("contacts")
         if (contacts) {
