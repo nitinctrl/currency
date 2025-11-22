@@ -4,24 +4,48 @@ import type React from "react"
 
 import { useState } from "react"
 import Link from "next/link"
-import { useRouter, usePathname } from 'next/navigation'
+import { useRouter, usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
-import { LayoutDashboard, FileText, FileCheck, Users, Package, IndianRupee, BarChart3, Settings, LogOut, Menu, X, CreditCard, Receipt, ShoppingCart, Wallet, TrendingUp, Scan, Brain, Briefcase, Calendar } from 'lucide-react'
+import {
+  LayoutDashboard,
+  FileText,
+  FileCheck,
+  Users,
+  Package,
+  IndianRupee,
+  BarChart3,
+  Settings,
+  LogOut,
+  Menu,
+  X,
+  CreditCard,
+  Receipt,
+  ShoppingCart,
+  Wallet,
+  TrendingUp,
+  Scan,
+  Brain,
+  Briefcase,
+  ChevronDown,
+  ChevronRight,
+} from "lucide-react"
 import { clearUser, getUser } from "@/lib/auth"
 import { Badge } from "@/components/ui/badge"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 
 interface DashboardLayoutProps {
   children: React.ReactNode
 }
 
-const navigation = [
+interface NavItem {
+  name: string
+  href: string
+  icon: any
+  dropdown?: { name: string; href: string }[]
+}
+
+const navigation: NavItem[] = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { name: "AI Hub", href: "/dashboard/ai", icon: Brain },
   { name: "POS", href: "/dashboard/pos", icon: Scan },
@@ -29,6 +53,15 @@ const navigation = [
   { name: "Insights", href: "/dashboard/ai/insights", icon: TrendingUp },
   { name: "Invoices", href: "/dashboard/invoices", icon: FileText },
   { name: "Quotations", href: "/dashboard/quotations", icon: FileCheck },
+  {
+    name: "Purchases",
+    href: "/dashboard/purchases",
+    icon: ShoppingCart,
+    dropdown: [
+      { name: "Purchase Order", href: "/dashboard/purchases/orders" },
+      { name: "Debit Notes", href: "/dashboard/purchases/debit-notes" },
+    ],
+  },
   { name: "Expenses", href: "/dashboard/expenses", icon: Wallet },
   { name: "Products", href: "/dashboard/products", icon: Package },
   { name: "Payments", href: "/dashboard/payments", icon: IndianRupee },
@@ -42,7 +75,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const router = useRouter()
   const pathname = usePathname()
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  
+  const [openDropdowns, setOpenDropdowns] = useState<Record<string, boolean>>({})
+
   const user = getUser()
 
   const handleLogout = () => {
@@ -55,6 +89,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       return item.dropdown.some((sub: any) => pathname === sub.href || pathname?.startsWith(sub.href + "/"))
     }
     return false
+  }
+
+  const toggleDropdown = (name: string) => {
+    setOpenDropdowns((prev) => ({ ...prev, [name]: !prev[name] }))
   }
 
   return (
@@ -108,13 +146,50 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           {/* Navigation */}
           <nav className="flex-1 space-y-1 overflow-y-auto p-4">
             {navigation.map((item) => {
-              const isActive = pathname === item.href || (pathname?.startsWith(item.href + "/") && item.href !== "/dashboard")
+              const isActive =
+                pathname === item.href || (pathname?.startsWith(item.href + "/") && item.href !== "/dashboard")
+              const isDropdownActive = isActiveDropdownItem(item)
+              const isOpen = openDropdowns[item.name] || isDropdownActive
+
+              if (item.dropdown) {
+                return (
+                  <Collapsible
+                    key={item.name}
+                    open={isOpen}
+                    onOpenChange={() => toggleDropdown(item.name)}
+                    className="w-full"
+                  >
+                    <CollapsibleTrigger asChild>
+                      <Button
+                        variant={isActive || isDropdownActive ? "secondary" : "ghost"}
+                        className="w-full justify-between h-11 text-base font-normal"
+                      >
+                        <div className="flex items-center">
+                          <item.icon className="mr-3 h-5 w-5" />
+                          {item.name}
+                        </div>
+                        {isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                      </Button>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="pl-4 space-y-1 mt-1">
+                      {item.dropdown.map((subItem) => (
+                        <Link key={subItem.name} href={subItem.href} onClick={() => setSidebarOpen(false)}>
+                          <Button
+                            variant={pathname === subItem.href ? "default" : "ghost"}
+                            className="w-full justify-start h-9 text-sm"
+                          >
+                            {subItem.name}
+                          </Button>
+                        </Link>
+                      ))}
+                    </CollapsibleContent>
+                  </Collapsible>
+                )
+              }
+
               return (
                 <Link key={item.name} href={item.href} onClick={() => setSidebarOpen(false)}>
-                  <Button
-                    variant={isActive ? "default" : "ghost"}
-                    className="w-full justify-start h-11 text-base"
-                  >
+                  <Button variant={isActive ? "default" : "ghost"} className="w-full justify-start h-11 text-base">
                     <item.icon className="mr-3 h-5 w-5" />
                     {item.name}
                   </Button>
