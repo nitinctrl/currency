@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { sql } from "@/lib/db"
+import { createClient } from "@/lib/supabase/server"
 
 export async function GET(request: Request) {
   try {
@@ -10,35 +10,37 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Email is required" }, { status: 400 })
     }
 
-    const users = await sql`SELECT id FROM profiles WHERE email = ${email}`
-    const user = users[0]
+    const supabase = await createClient()
+
+    const { data: user } = await supabase.from("profiles").select("id").eq("email", email).single()
 
     if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 })
     }
 
     // Fetch stats
-    const invoices = await sql`SELECT * FROM invoices WHERE user_id = ${user.id}`
-    const customers = await sql`SELECT * FROM customers WHERE user_id = ${user.id}`
+    const { data: invoices } = await supabase.from("invoices").select("*").eq("user_id", user.id)
 
-    const totalInvoices = invoices.length
-    const paidInvoices = invoices.filter((inv: any) => inv.status === "paid").length
-    const totalRevenue = invoices
-      .filter((inv: any) => inv.status === "paid")
-      .reduce((sum: number, inv: any) => sum + Number(inv.total_amount), 0)
+    const { data: customers } = await supabase.from("customers").select("*").eq("user_id", user.id)
 
-    const pendingAmount = invoices
-      .filter((inv: any) => inv.status === "sent" || inv.status === "overdue")
-      .reduce((sum: number, inv: any) => sum + Number(inv.total_amount), 0)
+    const totalInvoices = invoices?.length || 0
+    const paidInvoices = invoices?.filter((inv) => inv.status === "paid").length || 0
+    const totalRevenue =
+      invoices?.filter((inv) => inv.status === "paid").reduce((sum, inv) => sum + Number(inv.total_amount), 0) || 0
 
-    const overdueInvoices = invoices.filter((inv: any) => inv.status === "overdue").length
+    const pendingAmount =
+      invoices
+        ?.filter((inv) => inv.status === "sent" || inv.status === "overdue")
+        .reduce((sum, inv) => sum + Number(inv.total_amount), 0) || 0
+
+    const overdueInvoices = invoices?.filter((inv) => inv.status === "overdue").length || 0
 
     return NextResponse.json({
       totalInvoices,
       paidInvoices,
       totalRevenue,
       pendingAmount,
-      totalCustomers: customers.length,
+      totalCustomers: customers?.length || 0,
       overdueInvoices,
     })
   } catch (error) {

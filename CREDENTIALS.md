@@ -4,21 +4,21 @@
 
 ### Super Admin Account
 - **Email**: admin@bizacc.in
-- **Password**: `BizAcc@SuperAdmin2025!`
+- **Password**: `123456`
 - **Role**: Super Admin
-- **Previous Password**: Admin@123 (invalidated)
+- **Previous Password**: BizAcc@SuperAdmin2025! (invalidated)
 
 ### Admin Account
 - **Email**: wildknot01@gmail.com
-- **Password**: `Wildknot@Admin2025!`
+- **Password**: `123456`
 - **Role**: Admin
-- **Previous Password**: Wildknot@123 (invalidated)
+- **Previous Password**: Wildknot@Admin2025! (invalidated)
 
 ### User Account
 - **Email**: nygifting@gmail.com
-- **Password**: `NyGift@User2025!`
+- **Password**: `123456`
 - **Role**: User
-- **Previous Password**: User@123 (invalidated)
+- **Previous Password**: NyGift@User2025! (invalidated)
 
 ---
 

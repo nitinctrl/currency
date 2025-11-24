@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
-import { sql } from "@/lib/db"
-import { hashPassword, verifyPassword } from "@/lib/auth-neon"
+import { createClient } from "@/lib/supabase/server"
+import { hashPassword, verifyPassword } from "@/lib/auth-utils"
 
 export async function POST(request: Request) {
   try {
@@ -10,11 +10,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
     }
 
-    // Verify current password
-    const users = await sql`SELECT * FROM profiles WHERE email = ${email}`
-    const user = users[0]
+    const supabase = await createClient()
 
-    if (!user || !user.password_hash) {
+    // Verify current password
+    const { data: user, error } = await supabase.from("profiles").select("*").eq("email", email).single()
+
+    if (error || !user || !user.password_hash) {
       return NextResponse.json({ error: "User not found" }, { status: 404 })
     }
 
@@ -27,12 +28,13 @@ export async function POST(request: Request) {
     // Update password
     const newPasswordHash = await hashPassword(newPassword)
 
-    await sql`
-      UPDATE profiles 
-      SET password_hash = ${newPasswordHash},
-          updated_at = NOW()
-      WHERE email = ${email}
-    `
+    await supabase
+      .from("profiles")
+      .update({
+        password_hash: newPasswordHash,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("email", email)
 
     return NextResponse.json({ success: true })
   } catch (error) {

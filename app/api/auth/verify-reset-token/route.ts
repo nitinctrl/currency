@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { sql } from "@/lib/db"
+import { createClient } from "@/lib/supabase/server"
 import { hashToken } from "@/lib/token-generator"
 
 export async function POST(request: Request) {
@@ -10,21 +10,21 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Token is required" }, { status: 400 })
     }
 
+    const supabase = await createClient()
+
     // Hash the token to match against database
     const tokenHash = hashToken(token)
 
     // Find user with this token
-    const users = await sql`
-      SELECT id, email, reset_token_expires 
-      FROM profiles 
-      WHERE password_reset_token = ${tokenHash}
-    `
+    const { data: user, error } = await supabase
+      .from("profiles")
+      .select("id, email, reset_token_expires")
+      .eq("password_reset_token", tokenHash)
+      .single()
 
-    if (users.length === 0) {
+    if (error || !user) {
       return NextResponse.json({ valid: false, error: "Invalid reset token" }, { status: 400 })
     }
-
-    const user = users[0]
 
     // Check if token has expired
     const expiresAt = new Date(user.reset_token_expires)

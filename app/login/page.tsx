@@ -24,6 +24,8 @@ export default function LoginPage() {
     setError("")
 
     try {
+      console.log("[v0] Starting login request")
+
       const response = await fetch("/api/auth/login", {
         method: "POST",
         headers: {
@@ -32,7 +34,22 @@ export default function LoginPage() {
         body: JSON.stringify({ email, password }),
       })
 
+      console.log("[v0] Response status:", response.status)
+      console.log("[v0] Response headers:", response.headers)
+
+      const contentType = response.headers.get("content-type")
+      if (!contentType || !contentType.includes("application/json")) {
+        console.error("[v0] Response is not JSON, content-type:", contentType)
+        const text = await response.text()
+        console.error("[v0] Response text:", text)
+        setError("Server error: Invalid response format")
+        setLoading(false)
+        return
+      }
+
       const data = await response.json()
+
+      console.log("[v0] Response data:", data)
 
       if (!response.ok) {
         setError(data.error || "Invalid email or password")
@@ -48,11 +65,12 @@ export default function LoginPage() {
           redirectPath = "/admin"
         }
 
+        console.log("[v0] Redirecting to:", redirectPath)
         router.push(redirectPath)
       }
     } catch (err) {
+      console.error("[v0] Login error:", err)
       setError("An error occurred during login")
-      console.error(err)
     } finally {
       setLoading(false)
     }

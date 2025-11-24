@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { sql } from "@/lib/db"
+import { createClient } from "@/lib/supabase/server"
 import { generateResetToken, generateMagicLink } from "@/lib/token-generator"
 import { sendEmail, createPasswordResetEmail } from "@/lib/email-service"
 
@@ -41,38 +41,39 @@ export async function POST(request: Request) {
       )
     }
 
+    const supabase = await createClient()
+
     // Check if user exists
-    const users = await sql`SELECT id, email, full_name FROM profiles WHERE email = ${email}`
+    const { data: user } = await supabase.from("profiles").select("id, email, name").eq("email", email).single()
 
     // For security, always return success even if user doesn't exist
     // This prevents email enumeration attacks
-    if (users.length === 0) {
+    if (!user) {
       return NextResponse.json({
         success: true,
         message: "If an account exists with this email, you will receive a password reset link.",
       })
     }
 
-    const user = users[0]
-
     // Generate reset token
     const { token, hash } = generateResetToken()
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hours
 
     // Store token hash in database
-    await sql`
-      UPDATE profiles 
-      SET password_reset_token = ${hash},
-          reset_token_expires = ${expiresAt.toISOString()}
-      WHERE id = ${user.id}
-    `
+    await supabase
+      .from("profiles")
+      .update({
+        password_reset_token: hash,
+        reset_token_expires: expiresAt.toISOString(),
+      })
+      .eq("id", user.id)
 
     // Generate magic link
     const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://bizacc.in"
     const resetLink = generateMagicLink(token, baseUrl)
 
     // Send email
-    const emailHtml = createPasswordResetEmail(resetLink, user.full_name || "User")
+    const emailHtml = createPasswordResetEmail(resetLink, user.name || "User")
     const emailResult = await sendEmail({
       to: user.email,
       subject: "Reset Your BizAcc Password",
