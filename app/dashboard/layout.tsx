@@ -2,9 +2,14 @@
 
 import type React from "react"
 import { DashboardLayout } from "@/components/dashboard-layout"
+import { AuthProvider } from "@/contexts/auth-context"
 
 export const dynamic = "force-dynamic"
 
 export default function Layout({ children }: { children: React.ReactNode }) {
-  return <DashboardLayout>{children}</DashboardLayout>
+  return (
+    <AuthProvider>
+      <DashboardLayout>{children}</DashboardLayout>
+    </AuthProvider>
+  )
 }

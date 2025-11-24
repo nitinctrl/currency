@@ -30,6 +30,8 @@ const profitLossData = [
   { month: "Jun", revenue: 67000, expenses: 40000, profit: 27000 },
 ]
 
+export const dynamic = "force-dynamic"
+
 export default function DashboardPage() {
   const { user } = useAuth()
   const [stats, setStats] = useState({
