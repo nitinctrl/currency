@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
-import { sql } from "@/lib/db"
-import { hashPassword } from "@/lib/auth-neon"
+import { createClient } from "@supabase/supabase-js"
+import bcrypt from "bcryptjs"
 
 export async function POST(request: Request) {
   try {
@@ -10,26 +10,44 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
     }
 
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL || "",
+      process.env.SUPABASE_SERVICE_ROLE_KEY || "",
+    )
+
     // Check if user already exists
-    const existingUsers = await sql`SELECT * FROM profiles WHERE email = ${email}`
-    if (existingUsers.length > 0) {
+    const { data: existingUser } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("email", email.toLowerCase())
+      .single()
+
+    if (existingUser) {
       return NextResponse.json({ error: "User already exists" }, { status: 400 })
     }
 
-    const passwordHash = await hashPassword(password)
+    // Hash password
+    const passwordHash = await bcrypt.hash(password, 10)
 
     // Create new user
-    // Note: phone is not in the profiles table schema I created earlier, so I'll skip it for now or add it to profiles if needed.
-    // The schema has: id, email, full_name, role, password_hash, business_name, status, plan, created_at, updated_at
-    // I'll map 'name' to 'full_name' and 'businessName' to 'business_name'
+    const { data: newUser, error: insertError } = await supabase
+      .from("profiles")
+      .insert({
+        email: email.toLowerCase(),
+        password_hash: passwordHash,
+        role: "user",
+        name: name,
+        business_name: businessName || null,
+        plan: plan || "Free",
+        status: "pending",
+      })
+      .select("id, email, name, role, business_name, plan, status")
+      .single()
 
-    const result = await sql`
-      INSERT INTO profiles (email, password_hash, role, full_name, business_name, plan, status)
-      VALUES (${email}, ${passwordHash}, 'user', ${name}, ${businessName}, ${plan}, 'pending')
-      RETURNING id, email, full_name, role, business_name, plan, status
-    `
-
-    const newUser = result[0]
+    if (insertError) {
+      console.error("Insert error:", insertError)
+      return NextResponse.json({ error: "Failed to create account" }, { status: 500 })
+    }
 
     return NextResponse.json({ success: true, user: newUser })
   } catch (error) {
