@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/hooks/use-toast"
 import { Loader2 } from "lucide-react"
+import { setUser } from "@/lib/auth"
 
 export default function SignupPage() {
   const router = useRouter()
@@ -50,11 +51,16 @@ export default function SignupPage() {
         throw new Error(data.error || "Signup failed")
       }
 
+      if (data.user) {
+        setUser(data.user)
+      }
+
       toast({
         title: "Success!",
-        description: "Your account has been created successfully. Please wait for admin approval.",
+        description: "Your account has been created. Redirecting to dashboard...",
       })
-      router.push("/pending-approval")
+
+      router.push("/dashboard")
     } catch (error) {
       toast({
         variant: "destructive",

@@ -38,17 +38,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Invalid credentials" }, { status: 401 })
     }
 
-    // Check if user is approved
-    if (profile.status !== "approved") {
-      return NextResponse.json({ error: "Account pending approval" }, { status: 403 })
-    }
-
-    // Update last active session
-    await supabase
-      .from("user_sessions")
-      .upsert({ user_id: profile.id, last_active: new Date().toISOString() }, { onConflict: "user_id" })
-      .catch(() => {}) // Ignore session errors
-
     // Return user data without sensitive fields
     const { password_hash, ...safeProfile } = profile
 

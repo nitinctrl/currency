@@ -29,7 +29,6 @@ export async function POST(request: Request) {
     // Hash password
     const passwordHash = await bcrypt.hash(password, 10)
 
-    // Create new user
     const { data: newUser, error: insertError } = await supabase
       .from("profiles")
       .insert({
@@ -39,7 +38,7 @@ export async function POST(request: Request) {
         name: name,
         business_name: businessName || null,
         plan: plan || "Free",
-        status: "pending",
+        status: "approved", // Direct approval - no waiting
       })
       .select("id, email, name, role, business_name, plan, status")
       .single()
