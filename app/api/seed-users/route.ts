@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
-import { createClient } from "@/lib/supabase/server"
-import { hashPassword } from "@/lib/auth-utils"
+import { sql } from "@/lib/db"
+import { hashPassword } from "@/lib/auth-neon"
 
 export async function POST() {
   try {
@@ -31,41 +31,33 @@ export async function POST() {
       },
     ]
 
-    const supabase = await createClient()
-
     const results = []
 
     for (const user of defaultUsers) {
       // Check if user already exists
-      const { data: existingUsers } = await supabase.from("profiles").select("*").eq("email", user.email)
+      const existingUsers = await sql`SELECT * FROM profiles WHERE email = ${user.email}`
 
-      if (existingUsers && existingUsers.length > 0) {
+      if (existingUsers.length > 0) {
         // Update existing user
         const passwordHash = await hashPassword(user.password)
-        await supabase
-          .from("profiles")
-          .update({
-            password_hash: passwordHash,
-            role: user.role,
-            name: user.name,
-            business_name: user.business_name,
-            plan: user.plan,
-            status: "approved",
-          })
-          .eq("email", user.email)
+        await sql`
+          UPDATE profiles 
+          SET password_hash = ${passwordHash}, 
+              role = ${user.role}, 
+              full_name = ${user.name}, 
+              business_name = ${user.business_name},
+              plan = ${user.plan},
+              status = 'approved'
+          WHERE email = ${user.email}
+        `
         results.push({ email: user.email, status: "updated" })
       } else {
         // Create new user
         const passwordHash = await hashPassword(user.password)
-        await supabase.from("profiles").insert({
-          email: user.email,
-          password_hash: passwordHash,
-          role: user.role,
-          name: user.name,
-          business_name: user.business_name,
-          plan: user.plan,
-          status: "approved",
-        })
+        await sql`
+          INSERT INTO profiles (email, password_hash, role, full_name, business_name, plan, status)
+          VALUES (${user.email}, ${passwordHash}, ${user.role}, ${user.name}, ${user.business_name}, ${user.plan}, 'approved')
+        `
         results.push({ email: user.email, status: "created" })
       }
     }

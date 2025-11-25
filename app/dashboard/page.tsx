@@ -7,7 +7,7 @@ import { PlanUpgradeBanner } from "@/components/plan-upgrade-banner"
 import { AISearchBar } from "@/components/ai-search-bar"
 import { FileText, Users, Package, TrendingUp, IndianRupee, Clock } from "lucide-react"
 import { MOCK_INVOICES } from "@/lib/mock-data"
-import { useAuth } from "@/contexts/auth-context"
+import { getUser } from "@/lib/auth"
 import {
   Line,
   LineChart,
@@ -30,10 +30,8 @@ const profitLossData = [
   { month: "Jun", revenue: 67000, expenses: 40000, profit: 27000 },
 ]
 
-export const dynamic = "force-dynamic"
-
 export default function DashboardPage() {
-  const { user } = useAuth()
+  const user = getUser()
   const [stats, setStats] = useState({
     totalInvoices: 0,
     paidInvoices: 0,

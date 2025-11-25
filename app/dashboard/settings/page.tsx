@@ -15,10 +15,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast"
 import { Upload, X } from "lucide-react"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { useAuth } from "@/contexts/auth-context"
+import { getUser, setUser } from "@/lib/auth"
 
 export default function SettingsPage() {
-  const { user, updateUser } = useAuth()
+  const user = getUser()
   const { toast } = useToast()
   const [formData, setFormData] = useState({
     name: "",
@@ -120,7 +120,7 @@ export default function SettingsPage() {
       }
 
       // Update local user state
-      updateUser({
+      setUser({
         ...user,
         name: formData.name,
         businessName: formData.businessName,

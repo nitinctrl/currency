@@ -1,59 +1,63 @@
 import { NextResponse } from "next/server"
-import { createClient } from "@/lib/supabase/server"
-import { verifyPassword } from "@/lib/auth-utils"
+import { createClient } from "@supabase/supabase-js"
+import bcrypt from "bcryptjs"
 
 export async function POST(request: Request) {
   try {
     const { email, password } = await request.json()
 
-    console.log("[v0] Login attempt for email:", email)
-
     if (!email || !password) {
       return NextResponse.json({ error: "Email and password are required" }, { status: 400 })
     }
 
-    const supabase = await createClient()
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL || "",
+      process.env.SUPABASE_SERVICE_ROLE_KEY || "",
+    )
 
-    const { data: user, error } = await supabase.from("profiles").select("*").eq("email", email).single()
+    // Get user from profiles table by email
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("email", email.toLowerCase())
+      .single()
 
-    console.log("[v0] User query result:", { user, error })
-
-    if (error || !user) {
-      console.log("[v0] User not found or error:", error)
+    if (profileError || !profile) {
       return NextResponse.json({ error: "Invalid credentials" }, { status: 401 })
     }
 
-    if (!user.password_hash) {
-      console.log("[v0] No password_hash found for user")
+    // Check if user has a password hash
+    if (!profile.password_hash) {
+      return NextResponse.json({ error: "Password not set for this account" }, { status: 401 })
+    }
+
+    // Verify password using bcrypt
+    const isValidPassword = await bcrypt.compare(password, profile.password_hash)
+
+    if (!isValidPassword) {
       return NextResponse.json({ error: "Invalid credentials" }, { status: 401 })
     }
 
-    const isValid = await verifyPassword(password, user.password_hash)
-
-    if (!isValid) {
-      console.log("[v0] Password verification failed")
-      return NextResponse.json({ error: "Invalid credentials" }, { status: 401 })
+    // Check if user is approved
+    if (profile.status !== "approved") {
+      return NextResponse.json({ error: "Account pending approval" }, { status: 403 })
     }
 
-    // Update last active
-    await supabase.from("user_sessions").insert({
-      user_id: user.id,
-      profile_id: user.id,
-      last_activity: new Date().toISOString(),
-      is_active: true,
-    })
+    // Update last active session
+    await supabase
+      .from("user_sessions")
+      .upsert({ user_id: profile.id, last_active: new Date().toISOString() }, { onConflict: "user_id" })
+      .catch(() => {}) // Ignore session errors
 
-    // Return user data (excluding password hash)
-    const { password_hash, ...userData } = user
-
-    console.log("[v0] Login successful for user:", userData.email)
+    // Return user data without sensitive fields
+    const { password_hash, ...safeProfile } = profile
 
     return NextResponse.json({
       success: true,
-      user: userData,
+      user: safeProfile,
     })
   } catch (error) {
-    console.error("[v0] Login error:", error)
-    return NextResponse.json({ error: "Internal server error", details: String(error) }, { status: 500 })
+    console.error("Login error:", error)
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }

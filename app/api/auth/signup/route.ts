@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
-import { createClient } from "@/lib/supabase/server"
-import { hashPassword } from "@/lib/auth-utils"
+import { sql } from "@/lib/db"
+import { hashPassword } from "@/lib/auth-neon"
 
 export async function POST(request: Request) {
   try {
@@ -10,36 +10,26 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
     }
 
-    const supabase = await createClient()
-
     // Check if user already exists
-    const { data: existingUsers } = await supabase.from("profiles").select("*").eq("email", email)
-
-    if (existingUsers && existingUsers.length > 0) {
+    const existingUsers = await sql`SELECT * FROM profiles WHERE email = ${email}`
+    if (existingUsers.length > 0) {
       return NextResponse.json({ error: "User already exists" }, { status: 400 })
     }
 
     const passwordHash = await hashPassword(password)
 
     // Create new user
-    const { data: newUser, error } = await supabase
-      .from("profiles")
-      .insert({
-        email,
-        password_hash: passwordHash,
-        role: "user",
-        name,
-        business_name: businessName,
-        plan: plan || "Free",
-        status: "pending",
-      })
-      .select()
-      .single()
+    // Note: phone is not in the profiles table schema I created earlier, so I'll skip it for now or add it to profiles if needed.
+    // The schema has: id, email, full_name, role, password_hash, business_name, status, plan, created_at, updated_at
+    // I'll map 'name' to 'full_name' and 'businessName' to 'business_name'
 
-    if (error) {
-      console.error("Signup error:", error)
-      return NextResponse.json({ error: "Failed to create user" }, { status: 500 })
-    }
+    const result = await sql`
+      INSERT INTO profiles (email, password_hash, role, full_name, business_name, plan, status)
+      VALUES (${email}, ${passwordHash}, 'user', ${name}, ${businessName}, ${plan}, 'pending')
+      RETURNING id, email, full_name, role, business_name, plan, status
+    `
+
+    const newUser = result[0]
 
     return NextResponse.json({ success: true, user: newUser })
   } catch (error) {

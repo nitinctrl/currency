@@ -9,10 +9,10 @@ import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
 import { useToast } from "@/hooks/use-toast"
 import { useState } from "react"
-import { useAuth } from "@/contexts/auth-context"
+import { getUser } from "@/lib/auth"
 
 export default function AdminSettingsPage() {
-  const { user } = useAuth()
+  const user = getUser()
   const { toast } = useToast()
   const [currentPassword, setCurrentPassword] = useState("")
   const [newPassword, setNewPassword] = useState("")

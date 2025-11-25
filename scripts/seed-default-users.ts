@@ -16,21 +16,21 @@ async function seedDefaultUsers() {
   const defaultUsers = [
     {
       email: "admin@bizacc.in",
-      password: "Admin@123",
+      password: "123456",
       role: "superadmin",
       name: "Super Admin",
       business_name: "BizAcc Platform",
     },
     {
       email: "wildknot01@gmail.com",
-      password: "Wildknot@123",
+      password: "123456",
       role: "admin",
       name: "Wildknot Admin",
       business_name: "Wildknot Solutions",
     },
     {
       email: "nygifting@gmail.com",
-      password: "User@123",
+      password: "123456",
       role: "user",
       name: "NY Gifting",
       business_name: "NY Gifting Store",
